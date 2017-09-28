@@ -20,6 +20,7 @@ namespace Gastos
         Microsoft.Office.Interop.Excel.Application oXL;
         Workbooks oWBs;
         Workbook oWB;
+        System.Windows.Forms.Timer myTimer = new System.Windows.Forms.Timer();
 
         public Form1()
         {
@@ -35,6 +36,7 @@ namespace Gastos
             string[] strArray = new string[Properties.Settings.Default.Categorias.Count];
             Properties.Settings.Default.Categorias.CopyTo(strArray, 0);
             comboBox1.Items.AddRange(strArray);
+            myTimer.Tick += new EventHandler(myTimer_Tick);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -42,7 +44,16 @@ namespace Gastos
             Worksheet oSheet = getSheet(oWB, dateTimePicker1.Value);
             oSheet.Select(Type.Missing);
             addValues(oSheet, getLastRow(oSheet));
+            this.resultLbl.Show();
+            myTimer.Interval = 3000;
+            myTimer.Start();
+        }
+
+        private void myTimer_Tick(object sender, EventArgs e)
+        {
+            this.resultLbl.Hide();
             cleanInputs();
+            myTimer.Stop();
         }
 
 
@@ -67,6 +78,7 @@ namespace Gastos
             oSheet.Cells[row, 4].Value = comboBox2.Text;
             oSheet.Cells[row, 5].Value = (checkBox1.Checked) ? "SI" : "NO";
             oSheet.Cells[row, 8].Value = textBox1.Text;
+
         }
 
         private void cleanInputs()
@@ -122,5 +134,6 @@ namespace Gastos
                 Marshal.ReleaseComObject(oXL);
             }
         }
+
     }
 }

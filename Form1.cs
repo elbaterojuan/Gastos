@@ -77,7 +77,7 @@ namespace Gastos
             oSheet.Cells[row, 3].Value = numericUpDown1.Value;
             oSheet.Cells[row, 4].Value = comboBox2.Text;
             oSheet.Cells[row, 5].Value = (checkBox1.Checked) ? "SI" : "NO";
-            oSheet.Cells[row, 8].Value = textBox1.Text;
+            oSheet.Cells[row, 8].Value = (cuotas.Value==1) ? textBox1.Text: textBox1.Text + " " + cuotas.Value;
 
         }
 

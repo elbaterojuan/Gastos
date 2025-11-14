@@ -14,7 +14,10 @@ namespace Gastos.Views
     {
         private ExcelService _excelService;
         private DateTime _fecha;
+        private string _nombreHoja; // Nombre de la hoja del mes
         private List<Gasto> _gastos;
+        private List<Gasto> _gastosOriginales; // Copia de respaldo
+        private Gasto _gastoBeingEdited;
         
         private Panel panelHeader;
         private Panel panelFiltros;
@@ -31,6 +34,14 @@ namespace Gastos.Views
         {
             _excelService = excelService;
             _fecha = fecha;
+            
+            // Calcular el nombre de la hoja según el mes
+            string[] meses = { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+            string nombreMes = meses[fecha.Month - 1];
+            string año = fecha.ToString("yy");
+            _nombreHoja = $"{nombreMes}-{año}";
+            
             InitializeComponent();
         }
 
@@ -41,6 +52,7 @@ namespace Gastos.Views
             this.Text = $"Detalle de Gastos - {_fecha:MMMM yyyy}";
             this.BackColor = TemaColores.FondoClaro;
             this.Font = new Font("Segoe UI", 9.5F);
+            this.FormClosing += FormDetalles_FormClosing;
 
             CrearDataGridView();  // Primero el Fill
             CrearPanelFiltros();  // Luego Top
@@ -173,9 +185,24 @@ namespace Gastos.Views
             dgvGastos = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                AutoGenerateColumns = false
+                AutoGenerateColumns = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                SelectionMode = DataGridViewSelectionMode.CellSelect,
+                MultiSelect = false,
+                EditMode = DataGridViewEditMode.EditOnEnter,
+                ReadOnly = false
             };
             dgvGastos.AplicarEstiloDataGridView();
+            
+            // Asegurar que sea editable después de aplicar estilos
+            dgvGastos.ReadOnly = false;
+            
+            // Eventos para edición y eliminación
+            dgvGastos.CellBeginEdit += DgvGastos_CellBeginEdit;
+            dgvGastos.CellEndEdit += DgvGastos_CellEndEdit;
+            dgvGastos.CellContentClick += DgvGastos_CellContentClick;
+            dgvGastos.CellPainting += DgvGastos_CellPainting;
 
             // Configurar columnas
             dgvGastos.Columns.AddRange(new DataGridViewColumn[]
@@ -185,42 +212,58 @@ namespace Gastos.Views
                     DataPropertyName = "Fecha",
                     HeaderText = "📅 Fecha",
                     Width = 100,
+                    ReadOnly = false,
                     DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
                 },
-                new DataGridViewTextBoxColumn
+                new DataGridViewComboBoxColumn
                 {
                     DataPropertyName = "Categoria",
                     HeaderText = "🏷️ Categoría",
-                    Width = 150
+                    Width = 150,
+                    ReadOnly = false,
+                    DisplayStyle = DataGridViewComboBoxDisplayStyle.Nothing
                 },
                 new DataGridViewTextBoxColumn
                 {
                     DataPropertyName = "Monto",
                     HeaderText = "💰 Monto",
                     Width = 120,
+                    ReadOnly = false,
                     DefaultCellStyle = new DataGridViewCellStyle 
                     { 
                         Format = "$#,##0.00",
                         Alignment = DataGridViewContentAlignment.MiddleRight
                     }
                 },
-                new DataGridViewTextBoxColumn
+                new DataGridViewComboBoxColumn
                 {
                     DataPropertyName = "QuienPago",
                     HeaderText = "👤 Quién Pagó",
-                    Width = 130
+                    Width = 130,
+                    ReadOnly = false,
+                    DisplayStyle = DataGridViewComboBoxDisplayStyle.Nothing
                 },
                 new DataGridViewCheckBoxColumn
                 {
                     DataPropertyName = "EsProporcional",
                     HeaderText = "� Proporcional",
-                    Width = 110
+                    Width = 110,
+                    ReadOnly = false
                 },
                 new DataGridViewTextBoxColumn
                 {
                     DataPropertyName = "Comentarios",
                     HeaderText = "📝 Comentarios",
-                    AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                    AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                    ReadOnly = false
+                },
+                new DataGridViewButtonColumn
+                {
+                    HeaderText = "",
+                    Name = "btnEliminar",
+                    Width = 40,
+                    Text = "✖",
+                    UseColumnTextForButtonValue = false
                 }
             });
 
@@ -234,12 +277,24 @@ namespace Gastos.Views
                 _gastos = await _excelService.ObtenerGastosMesAsync(_fecha);
                 
                 // Cargar categorías únicas
-                var categorias = _gastos.Select(g => g.Categoria).Distinct().OrderBy(c => c);
+                var categorias = _gastos.Select(g => g.Categoria).Distinct().OrderBy(c => c).ToList();
                 foreach (var cat in categorias)
                 {
                     if (!cboCategoria.Items.Contains(cat))
                         cboCategoria.Items.Add(cat);
                 }
+                
+                // Configurar ComboBox de Categoría en el DataGridView
+                var colCategoria = (DataGridViewComboBoxColumn)dgvGastos.Columns[1];
+                colCategoria.Items.Clear();
+                foreach (var cat in categorias)
+                    colCategoria.Items.Add(cat);
+                
+                // Configurar ComboBox de QuienPago en el DataGridView
+                var colQuienPago = (DataGridViewComboBoxColumn)dgvGastos.Columns[3];
+                colQuienPago.Items.Clear();
+                colQuienPago.Items.Add("Andrea");
+                colQuienPago.Items.Add("Juan");
 
                 MostrarGastos(_gastos);
             }
@@ -280,6 +335,17 @@ namespace Gastos.Views
             dgvGastos.DataSource = null;
             dgvGastos.DataSource = gastos;
 
+            // Crear una copia profunda de los gastos originales para comparación
+            _gastosOriginales = gastos.Select(g => new Gasto
+            {
+                Fecha = g.Fecha,
+                Categoria = g.Categoria,
+                Monto = g.Monto,
+                QuienPago = g.QuienPago,
+                EsProporcional = g.EsProporcional,
+                Comentarios = g.Comentarios
+            }).ToList();
+
             var total = gastos.Sum(g => g.Monto);
             lblTotal.Text = $"Total: ${total:N2}";
         }
@@ -287,6 +353,14 @@ namespace Gastos.Views
         private async void BtnMesAnterior_Click(object sender, EventArgs e)
         {
             _fecha = _fecha.AddMonths(-1);
+            
+            // Actualizar nombre de la hoja
+            string[] meses = { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+            string nombreMes = meses[_fecha.Month - 1];
+            string año = _fecha.ToString("yy");
+            _nombreHoja = $"{nombreMes}-{año}";
+            
             lblTitulo.Text = $"📋 Detalle de Gastos - {_fecha:MMMM yyyy}";
             this.Text = $"Detalle de Gastos - {_fecha:MMMM yyyy}";
             CargarDatos();
@@ -295,6 +369,14 @@ namespace Gastos.Views
         private async void BtnMesSiguiente_Click(object sender, EventArgs e)
         {
             _fecha = _fecha.AddMonths(1);
+            
+            // Actualizar nombre de la hoja
+            string[] meses = { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+            string nombreMes = meses[_fecha.Month - 1];
+            string año = _fecha.ToString("yy");
+            _nombreHoja = $"{nombreMes}-{año}";
+            
             lblTitulo.Text = $"📋 Detalle de Gastos - {_fecha:MMMM yyyy}";
             this.Text = $"Detalle de Gastos - {_fecha:MMMM yyyy}";
             CargarDatos();
@@ -323,6 +405,204 @@ namespace Gastos.Views
             {
                 MessageBox.Show($"Error al exportar: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void FormDetalles_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Forzar que termine la edición antes de cerrar
+            if (dgvGastos.IsCurrentCellInEditMode && _gastoBeingEdited != null)
+            {
+                dgvGastos.EndEdit();
+                
+                // Dar tiempo para que se complete el guardado asíncrono
+                if (dgvGastos.CurrentCell != null && dgvGastos.CurrentRow != null)
+                {
+                    var rowIndex = dgvGastos.CurrentCell.RowIndex;
+                    if (rowIndex >= 0 && rowIndex < _gastos.Count)
+                    {
+                        try
+                        {
+                            var gastoActualizado = (Gasto)dgvGastos.Rows[rowIndex].DataBoundItem;
+                            await _excelService.ActualizarGastoAsync(_gastoBeingEdited, gastoActualizado, _nombreHoja);
+                            _gastoBeingEdited = null;
+                        }
+                        catch { }
+                    }
+                }
+            }
+        }
+
+        private void DgvGastos_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            // Capturar el gasto ANTES de que se modifique desde la lista de respaldo
+            if (e.RowIndex >= 0 && _gastosOriginales != null && e.RowIndex < _gastosOriginales.Count)
+            {
+                var original = _gastosOriginales[e.RowIndex];
+                if (original != null)
+                {
+                    _gastoBeingEdited = new Gasto
+                    {
+                        Fecha = original.Fecha,
+                        Categoria = original.Categoria,
+                        Monto = original.Monto,
+                        QuienPago = original.QuienPago,
+                        EsProporcional = original.EsProporcional,
+                        Comentarios = original.Comentarios
+                    };
+                }
+            }
+        }
+
+        private async void DgvGastos_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            try
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex == 6 || _gastoBeingEdited == null)
+                    return;
+
+                var gastoActualizado = (Gasto)dgvGastos.Rows[e.RowIndex].DataBoundItem;
+
+                // Verificar si realmente hubo cambios
+                bool huboChangios = _gastoBeingEdited.Fecha != gastoActualizado.Fecha ||
+                                   _gastoBeingEdited.Categoria != gastoActualizado.Categoria ||
+                                   _gastoBeingEdited.Monto != gastoActualizado.Monto ||
+                                   _gastoBeingEdited.QuienPago != gastoActualizado.QuienPago ||
+                                   _gastoBeingEdited.EsProporcional != gastoActualizado.EsProporcional ||
+                                   _gastoBeingEdited.Comentarios != gastoActualizado.Comentarios;
+
+                if (!huboChangios)
+                {
+                    _gastoBeingEdited = null;
+                    return; // No hay cambios, no hacer nada
+                }
+
+                bool resultado = await _excelService.ActualizarGastoAsync(_gastoBeingEdited, gastoActualizado, _nombreHoja);
+
+                if (resultado)
+                {
+                    // Actualizar la lista de respaldo
+                    if (_gastosOriginales != null && e.RowIndex < _gastosOriginales.Count)
+                    {
+                        _gastosOriginales[e.RowIndex] = new Gasto
+                        {
+                            Fecha = gastoActualizado.Fecha,
+                            Categoria = gastoActualizado.Categoria,
+                            Monto = gastoActualizado.Monto,
+                            QuienPago = gastoActualizado.QuienPago,
+                            EsProporcional = gastoActualizado.EsProporcional,
+                            Comentarios = gastoActualizado.Comentarios
+                        };
+                    }
+                    
+                    var total = _gastos.Sum(g => g.Monto);
+                    lblTotal.Text = $"Total: ${total:N2}";
+                    _gastoBeingEdited = null;
+                }
+                else
+                {
+                    MessageBox.Show("No se pudo actualizar el gasto en Excel", "Error");
+                    _gastoBeingEdited = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error");
+                _gastoBeingEdited = null;
+            }
+        }
+
+        private async void DgvGastos_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // Verificar si es la columna del botón eliminar (ahora es la última columna, índice 6)
+            if (e.ColumnIndex == 6 && e.RowIndex >= 0)
+            {
+                try
+                {
+                    var gasto = (Gasto)dgvGastos.Rows[e.RowIndex].DataBoundItem;
+
+                    var confirmacion = MessageBox.Show(
+                        $"¿Está seguro de eliminar el gasto?\n\n" +
+                        $"Fecha: {gasto.Fecha:dd/MM/yyyy}\n" +
+                        $"Categoría: {gasto.Categoria}\n" +
+                        $"Monto: ${gasto.Monto:N2}",
+                        "Confirmar eliminación",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (confirmacion == DialogResult.Yes)
+                    {
+                        bool resultado = await _excelService.EliminarGastoAsync(gasto);
+
+                        if (resultado)
+                        {
+                            MessageBox.Show("Gasto eliminado correctamente", "Éxito",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            // Recargar para actualizar totales
+                            CargarDatos();
+                        }
+                        else
+                        {
+                            MessageBox.Show("No se pudo eliminar el gasto", "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al eliminar gasto: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void DgvGastos_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            // Pintar el botón eliminar en rojo (última columna, índice 6)
+            if (e.ColumnIndex == 6 && e.RowIndex >= 0)
+            {
+                // Pintar el fondo de la celda primero
+                e.PaintBackground(e.CellBounds, true);
+
+                // Calcular un rectángulo más pequeño centrado en la celda
+                var buttonSize = 24;
+                var buttonRect = new Rectangle(
+                    e.CellBounds.Left + (e.CellBounds.Width - buttonSize) / 2,
+                    e.CellBounds.Top + (e.CellBounds.Height - buttonSize) / 2,
+                    buttonSize,
+                    buttonSize
+                );
+
+                // Dibujar el botón rojo con bordes redondeados
+                using (var brush = new SolidBrush(Color.FromArgb(220, 38, 38))) // Rojo
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    int radius = 4;
+                    path.AddArc(buttonRect.X, buttonRect.Y, radius, radius, 180, 90);
+                    path.AddArc(buttonRect.Right - radius, buttonRect.Y, radius, radius, 270, 90);
+                    path.AddArc(buttonRect.Right - radius, buttonRect.Bottom - radius, radius, radius, 0, 90);
+                    path.AddArc(buttonRect.X, buttonRect.Bottom - radius, radius, radius, 90, 90);
+                    path.CloseFigure();
+                    
+                    e.Graphics.FillPath(brush, path);
+                    
+                    using (var pen = new Pen(Color.FromArgb(185, 28, 28), 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+
+                // Dibujar el texto "✖" centrado
+                var font = new Font(dgvGastos.Font.FontFamily, 11, FontStyle.Bold);
+                var textSize = TextRenderer.MeasureText("✖", font);
+                var textLocation = new Point(
+                    buttonRect.Left + (buttonRect.Width - textSize.Width) / 2,
+                    buttonRect.Top + (buttonRect.Height - textSize.Height) / 2
+                );
+
+                TextRenderer.DrawText(e.Graphics, "✖", font, textLocation, Color.White);
+
+                e.Handled = true;
             }
         }
     }

@@ -496,10 +496,21 @@ namespace Gastos.Views
                     lblTituloDeuda.Text = $"💳 Debe {resumen.DeudorNombre}";
                 }
                 lblDeuda.Text = $"${resumen.DeudorMonto:N2}";
+                
+                // Cambiar color del monto según quién debe
+                if (resumen.DeudorNombre == "Andrea")
+                {
+                    lblDeuda.ForeColor = Color.DeepPink;
+                }
+                else if (resumen.DeudorNombre == "Juan")
+                {
+                    lblDeuda.ForeColor = Color.FromArgb(59, 130, 246); // Azul
+                }
             }
             else
             {
                 lblDeuda.Text = "$0.00";
+                lblDeuda.ForeColor = Color.White;
             }
 
             // Actualizar sueldos

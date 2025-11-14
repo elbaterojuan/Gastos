@@ -768,6 +768,148 @@ namespace Gastos.Services
             }
         }
 
+        /// <summary>
+        /// Actualiza un gasto existente en el Excel
+        /// </summary>
+        public async Task<bool> ActualizarGastoAsync(Gasto gastoOriginal, Gasto gastoActualizado, string nombreHoja = null)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    using (var package = new ExcelPackage(new FileInfo(_excelPath)))
+                    {
+                        ExcelWorksheet worksheet;
+                        
+                        // Si se especificó un nombre de hoja, usar esa directamente
+                        if (!string.IsNullOrEmpty(nombreHoja))
+                        {
+                            worksheet = package.Workbook.Worksheets[nombreHoja];
+                            if (worksheet == null)
+                                return false;
+                        }
+                        else
+                        {
+                            // Si no, buscar por el mes del gasto
+                            worksheet = BuscarHojaMes(package, gastoOriginal.Fecha);
+                            if (worksheet == null)
+                                return false;
+                        }
+                        
+                        if (worksheet.Dimension == null)
+                            return false;
+
+                        int rowCount = worksheet.Dimension.End.Row;
+                        
+                        for (int row = 2; row <= rowCount; row++)
+                        {
+                            var fechaCell = worksheet.Cells[row, 1].Value;
+                            if (fechaCell == null) continue;
+
+                            DateTime fechaGasto;
+                            if (fechaCell is DateTime)
+                                fechaGasto = (DateTime)fechaCell;
+                            else if (fechaCell is double)
+                                fechaGasto = DateTime.FromOADate((double)fechaCell);
+                            else
+                                continue;
+
+                            var categoria = worksheet.Cells[row, 2].Value?.ToString();
+                            var comentarios = worksheet.Cells[row, 8].Value?.ToString() ?? "";
+
+                            // Buscar por fecha + categoria + comentarios
+                            if (fechaGasto.Date == gastoOriginal.Fecha.Date &&
+                                categoria == gastoOriginal.Categoria &&
+                                comentarios == gastoOriginal.Comentarios)
+                            {
+                                worksheet.Cells[row, 1].Value = gastoActualizado.Fecha;
+                                worksheet.Cells[row, 2].Value = gastoActualizado.Categoria;
+                                worksheet.Cells[row, 3].Value = gastoActualizado.Monto;
+                                worksheet.Cells[row, 4].Value = gastoActualizado.QuienPago;
+                                worksheet.Cells[row, 5].Value = gastoActualizado.EsProporcional ? "Sí" : "No";
+                                worksheet.Cells[row, 8].Value = gastoActualizado.Comentarios;
+
+                                package.Workbook.Calculate();
+                                package.Workbook.CalcMode = ExcelCalcMode.Automatic;
+                                package.Workbook.Properties.Modified = DateTime.Now;
+                                
+                                package.Save();
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error ActualizarGastoAsync: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
+        /// <summary>
+        /// Elimina un gasto del Excel
+        /// </summary>
+        public async Task<bool> EliminarGastoAsync(Gasto gasto)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    using (var package = new ExcelPackage(new FileInfo(_excelPath)))
+                    {
+                        var worksheet = BuscarHojaMes(package, gasto.Fecha);
+                        if (worksheet == null || worksheet.Dimension == null)
+                            return false;
+
+                        // Buscar la fila del gasto
+                        int rowCount = worksheet.Dimension.End.Row;
+                        for (int row = 2; row <= rowCount; row++)
+                        {
+                            var fechaCell = worksheet.Cells[row, 1].Value;
+                            if (fechaCell == null) continue;
+
+                            DateTime fechaGasto;
+                            if (fechaCell is DateTime)
+                                fechaGasto = (DateTime)fechaCell;
+                            else if (fechaCell is double)
+                                fechaGasto = DateTime.FromOADate((double)fechaCell);
+                            else
+                                continue;
+
+                            // Comparar fecha, categoría y monto para identificar el gasto
+                            if (fechaGasto.Date == gasto.Fecha.Date &&
+                                worksheet.Cells[row, 2].Value?.ToString() == gasto.Categoria &&
+                                worksheet.Cells[row, 3].Value != null &&
+                                Convert.ToDecimal(worksheet.Cells[row, 3].Value) == gasto.Monto &&
+                                worksheet.Cells[row, 8].Value?.ToString() == gasto.Comentarios)
+                            {
+                                // Eliminar la fila
+                                worksheet.DeleteRow(row);
+
+                                // Forzar recálculo
+                                package.Workbook.Calculate();
+                                package.Workbook.CalcMode = ExcelCalcMode.Automatic;
+                                package.Workbook.Properties.Modified = DateTime.Now;
+
+                                package.Save();
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error al eliminar gasto: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
         public string RutaArchivo => _excelPath;
 
         public void Dispose()

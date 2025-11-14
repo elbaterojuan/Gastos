@@ -153,9 +153,19 @@ namespace Gastos
                 for (int i = 1; i <= cantidadCuotas; i++)
                 {
                     var fechaCuota = dateTimePicker1.Value.AddMonths(i - 1);
-                    var comentarioCuota = string.IsNullOrWhiteSpace(textBox1.Text) 
-                        ? $"Cuota {i}/{cantidadCuotas}"
-                        : $"{textBox1.Text} - Cuota {i}/{cantidadCuotas}";
+                    
+                    // Solo agregar info de cuota si hay más de una
+                    string comentarioCuota;
+                    if (cantidadCuotas > 1)
+                    {
+                        comentarioCuota = string.IsNullOrWhiteSpace(textBox1.Text) 
+                            ? $"Cuota {i}/{cantidadCuotas}"
+                            : $"{textBox1.Text} - Cuota {i}/{cantidadCuotas}";
+                    }
+                    else
+                    {
+                        comentarioCuota = textBox1.Text;
+                    }
                     
                     var gasto = new Gasto
                     {

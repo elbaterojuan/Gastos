@@ -39,9 +39,9 @@ namespace Gastos.Views
             this.BackColor = TemaColores.FondoClaro;
             this.Font = new Font("Segoe UI", 9.5F);
 
-            CrearHeader();
-            CrearPanelFiltros();
-            CrearDataGridView();
+            CrearDataGridView();  // Primero el Fill
+            CrearPanelFiltros();  // Luego Top
+            CrearHeader();  // Finalmente Top (queda arriba de todo)
             CargarDatos();
         }
 
@@ -164,10 +164,10 @@ namespace Gastos.Views
                 {
                     DataPropertyName = "Monto",
                     HeaderText = "💰 Monto",
-                    Width = 100,
+                    Width = 120,
                     DefaultCellStyle = new DataGridViewCellStyle 
                     { 
-                        Format = "C2",
+                        Format = "$#,##0.00",
                         Alignment = DataGridViewContentAlignment.MiddleRight
                     }
                 },
@@ -175,20 +175,13 @@ namespace Gastos.Views
                 {
                     DataPropertyName = "QuienPago",
                     HeaderText = "👤 Quién Pagó",
-                    Width = 120
-                },
-                new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "Cuotas",
-                    HeaderText = "🔢 Cuotas",
-                    Width = 80,
-                    DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+                    Width = 130
                 },
                 new DataGridViewCheckBoxColumn
                 {
                     DataPropertyName = "EsProporcional",
-                    HeaderText = "⚖️ Proporcional",
-                    Width = 100
+                    HeaderText = "� Proporcional",
+                    Width = 110
                 },
                 new DataGridViewTextBoxColumn
                 {

@@ -93,18 +93,22 @@ namespace Gastos.Utils
             dgv.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             dgv.EnableHeadersVisualStyles = false;
             
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = TemaColores.FondoGris;
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor = TemaColores.TextoOscuro;
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = TemaColores.PrimarioAzul;
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             dgv.ColumnHeadersDefaultCellStyle.Padding = new Padding(10);
+            dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgv.ColumnHeadersHeight = 45;
+            dgv.ColumnHeadersVisible = true;
             
             dgv.DefaultCellStyle.Font = new Font("Segoe UI", 9.5F);
+            dgv.DefaultCellStyle.BackColor = Color.White;
+            dgv.DefaultCellStyle.ForeColor = TemaColores.TextoOscuro;
             dgv.DefaultCellStyle.SelectionBackColor = TemaColores.PrimarioAzul;
             dgv.DefaultCellStyle.SelectionForeColor = Color.White;
             dgv.DefaultCellStyle.Padding = new Padding(8);
             
-            dgv.AlternatingRowsDefaultCellStyle.BackColor = TemaColores.FondoGris;
+            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 248, 250);
             dgv.RowTemplate.Height = 40;
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgv.MultiSelect = false;

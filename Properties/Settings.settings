@@ -2,34 +2,6 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Gastos.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="Categorias" Type="System.Collections.Specialized.StringCollection" Scope="Application">
-      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
-&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
-  &lt;string&gt;Supermercado&lt;/string&gt;
-  &lt;string&gt;Verduleria&lt;/string&gt;
-  &lt;string&gt;Almacen&lt;/string&gt;
-  &lt;string&gt;Carnicería&lt;/string&gt;
-  &lt;string&gt;Pescadería&lt;/string&gt;
-  &lt;string&gt;Sushi&lt;/string&gt;
-  &lt;string&gt;Expensas&lt;/string&gt;
-  &lt;string&gt;Edesur&lt;/string&gt;
-  &lt;string&gt;Metrogas&lt;/string&gt;
-  &lt;string&gt;Impuesto municipal&lt;/string&gt;
-  &lt;string&gt;Arba&lt;/string&gt;
-  &lt;string&gt;Telefónica&lt;/string&gt;
-  &lt;string&gt;Casamiento&lt;/string&gt;
-  &lt;string&gt;Netflix&lt;/string&gt;
-  &lt;string&gt;Cablevisión&lt;/string&gt;
-  &lt;string&gt;Prestamo&lt;/string&gt;
-  &lt;string&gt;Salida&lt;/string&gt;
-  &lt;string&gt;Seguro Hogar&lt;/string&gt;
-  &lt;string&gt;Spotify&lt;/string&gt;
-  &lt;string&gt;Farmacia&lt;/string&gt;
-  &lt;string&gt;Limpieza&lt;/string&gt;
-  &lt;string&gt;Consolidación&lt;/string&gt;
-  &lt;string&gt;Otros&lt;/string&gt;
-&lt;/ArrayOfString&gt;</Value>
-    </Setting>
     <Setting Name="Carpeta" Type="System.String" Scope="User">
       <Value Profile="(Default)">C:\Users\juan.sebastian.rocco\Downloads</Value>
     </Setting>

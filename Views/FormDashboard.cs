@@ -15,14 +15,23 @@ namespace Gastos.Views
         private ExcelService _excelService;
         private Panel panelHeader;
         private Panel panelStats;
+        private Panel panelSueldos;
         private Panel panelCharts;
         private Label lblTitulo;
         private Label lblTotalGastos;
         private Label lblPromedioGastos;
         private Label lblCantidadGastos;
+        private Label lblDeuda;
+        private NumericUpDown txtSueldoAndrea;
+        private NumericUpDown txtSueldoJuan;
+        private Label lblSueldoTotal;
+        private Label lblPorcentajeAndrea;
+        private Label lblPorcentajeJuan;
+        private Button btnGuardarSueldos;
         private Chart chartCategorias;
         private Chart chartPersonas;
         private ComboBox cboMes;
+        private ComboBox cboAño;
         private Button btnActualizar;
         private Button btnVerDetalles;
 
@@ -34,15 +43,18 @@ namespace Gastos.Views
 
         private void InitializeComponent()
         {
-            this.Size = new Size(1200, 700);
+            this.Size = new Size(1200, 750);
+            this.MinimumSize = new Size(1000, 600);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "Dashboard de Gastos";
             this.BackColor = TemaColores.FondoClaro;
             this.Font = new Font("Segoe UI", 9.5F);
+            this.AutoScroll = true;
 
-            CrearHeader();
-            CrearPanelEstadisticas();
-            CrearPanelGraficos();
+            CrearPanelGraficos();  // Primero el Fill
+            CrearPanelSueldos();  // Luego Top
+            CrearPanelEstadisticas();  // Luego Top
+            CrearHeader();  // Finalmente Top (queda arriba de todo)
             CargarDatosIniciales();
         }
 
@@ -67,10 +79,13 @@ namespace Gastos.Views
 
             cboMes = new ComboBox
             {
-                Width = 200,
-                Location = new Point(300, 28),
+                Width = 150,
+                Location = new Point(350, 28),
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10F)
+                Font = new Font("Segoe UI", 11F),
+                DropDownWidth = 150,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White
             };
             cboMes.Items.AddRange(new object[] {
                 "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -79,10 +94,29 @@ namespace Gastos.Views
             cboMes.SelectedIndex = DateTime.Now.Month - 1;
             cboMes.SelectedIndexChanged += async (s, e) => await CargarDatos();
 
+            cboAño = new ComboBox
+            {
+                Width = 100,
+                Location = new Point(520, 28),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 11F),
+                DropDownWidth = 100,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White
+            };
+            // Agregar años desde 2020 hasta el año actual + 2
+            int añoActual = DateTime.Now.Year;
+            for (int año = 2020; año <= añoActual + 2; año++)
+            {
+                cboAño.Items.Add(año);
+            }
+            cboAño.SelectedItem = añoActual;
+            cboAño.SelectedIndexChanged += async (s, e) => await CargarDatos();
+
             btnActualizar = new Button
             {
                 Text = "🔄 Actualizar",
-                Location = new Point(520, 25),
+                Location = new Point(640, 25),
                 Size = new Size(120, 35),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = TemaColores.SecundarioVerde,
@@ -96,7 +130,7 @@ namespace Gastos.Views
             btnVerDetalles = new Button
             {
                 Text = "📋 Ver Detalles",
-                Location = new Point(660, 25),
+                Location = new Point(780, 25),
                 Size = new Size(140, 35),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
@@ -107,7 +141,7 @@ namespace Gastos.Views
             btnVerDetalles.FlatAppearance.BorderSize = 0;
             btnVerDetalles.Click += BtnVerDetalles_Click;
 
-            panelHeader.Controls.AddRange(new Control[] { lblTitulo, cboMes, btnActualizar, btnVerDetalles });
+            panelHeader.Controls.AddRange(new Control[] { lblTitulo, cboMes, cboAño, btnActualizar, btnVerDetalles });
             this.Controls.Add(panelHeader);
         }
 
@@ -126,22 +160,163 @@ namespace Gastos.Views
             lblTotalGastos = (Label)panelTotal.Controls[1];
 
             // Panel Promedio
-            var panelPromedio = CrearPanelStat("📊 Promedio", "$0.00", TemaColores.SecundarioVerde, 300);
+            var panelPromedio = CrearPanelStat("📊 Promedio", "$0.00", TemaColores.SecundarioVerde, 230);
             lblPromedioGastos = (Label)panelPromedio.Controls[1];
 
             // Panel Cantidad
-            var panelCantidad = CrearPanelStat("🔢 Cantidad", "0", TemaColores.AccentoNaranja, 600);
+            var panelCantidad = CrearPanelStat("🔢 Cantidad", "0", TemaColores.AccentoNaranja, 460);
             lblCantidadGastos = (Label)panelCantidad.Controls[1];
 
-            panelStats.Controls.AddRange(new Control[] { panelTotal, panelPromedio, panelCantidad });
+            // Panel Deuda
+            var panelDeuda = CrearPanelStat("💳 Deuda", "$0.00", Color.FromArgb(239, 68, 68), 690);
+            lblDeuda = (Label)panelDeuda.Controls[1];
+
+            panelStats.Controls.AddRange(new Control[] { panelTotal, panelPromedio, panelCantidad, panelDeuda });
             this.Controls.Add(panelStats);
+        }
+
+        private void CrearPanelSueldos()
+        {
+            panelSueldos = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 100,
+                BackColor = Color.White,
+                Padding = new Padding(20)
+            };
+
+            var lblTitulo = new Label
+            {
+                Text = "💼 Sueldos y Porcentajes",
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                ForeColor = TemaColores.TextoOscuro,
+                AutoSize = true,
+                Location = new Point(20, 15)
+            };
+
+            // Sueldo Andrea
+            var lblAndrea = new Label
+            {
+                Text = "Sueldo Andrea:",
+                Location = new Point(20, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F)
+            };
+
+            txtSueldoAndrea = new NumericUpDown
+            {
+                Location = new Point(130, 47),
+                Width = 120,
+                Maximum = 999999999,
+                DecimalPlaces = 2,
+                ThousandsSeparator = true,
+                Font = new Font("Segoe UI", 10F)
+            };
+            txtSueldoAndrea.ValueChanged += (s, e) => ActualizarCalculosSueldos();
+
+            // Sueldo Juan
+            var lblJuan = new Label
+            {
+                Text = "Sueldo Juan:",
+                Location = new Point(270, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F)
+            };
+
+            txtSueldoJuan = new NumericUpDown
+            {
+                Location = new Point(365, 47),
+                Width = 120,
+                Maximum = 999999999,
+                DecimalPlaces = 2,
+                ThousandsSeparator = true,
+                Font = new Font("Segoe UI", 10F)
+            };
+            txtSueldoJuan.ValueChanged += (s, e) => ActualizarCalculosSueldos();
+
+            // Total
+            var lblTotalTexto = new Label
+            {
+                Text = "Total:",
+                Location = new Point(510, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold)
+            };
+
+            lblSueldoTotal = new Label
+            {
+                Text = "$0.00",
+                Location = new Point(565, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = TemaColores.PrimarioAzul
+            };
+
+            // Porcentaje Andrea
+            var lblPctAndreaTexto = new Label
+            {
+                Text = "% Andrea:",
+                Location = new Point(650, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F)
+            };
+
+            lblPorcentajeAndrea = new Label
+            {
+                Text = "0%",
+                Location = new Point(725, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = TemaColores.SecundarioVerde
+            };
+
+            // Porcentaje Juan
+            var lblPctJuanTexto = new Label
+            {
+                Text = "% Juan:",
+                Location = new Point(780, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F)
+            };
+
+            lblPorcentajeJuan = new Label
+            {
+                Text = "0%",
+                Location = new Point(840, 50),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = TemaColores.AccentoNaranja
+            };
+
+            // Botón Guardar
+            btnGuardarSueldos = new Button
+            {
+                Text = "💾 Guardar",
+                Location = new Point(920, 45),
+                Size = new Size(100, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = TemaColores.SecundarioVerde,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnGuardarSueldos.FlatAppearance.BorderSize = 0;
+            btnGuardarSueldos.Click += BtnGuardarSueldos_Click;
+
+            panelSueldos.Controls.AddRange(new Control[] {
+                lblTitulo, lblAndrea, txtSueldoAndrea, lblJuan, txtSueldoJuan,
+                lblTotalTexto, lblSueldoTotal, lblPctAndreaTexto, lblPorcentajeAndrea,
+                lblPctJuanTexto, lblPorcentajeJuan, btnGuardarSueldos
+            });
+
+            this.Controls.Add(panelSueldos);
         }
 
         private Panel CrearPanelStat(string titulo, string valor, Color color, int x)
         {
             var panel = new Panel
             {
-                Size = new Size(280, 90),
+                Size = new Size(220, 90),
                 Location = new Point(x, 0),
                 BackColor = Color.White
             };
@@ -174,7 +349,8 @@ namespace Gastos.Views
         {
             panelCharts = new Panel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                Height = 450,
                 BackColor = TemaColores.FondoClaro,
                 Padding = new Padding(20)
             };
@@ -246,7 +422,8 @@ namespace Gastos.Views
                 btnActualizar.Enabled = false;
                 btnActualizar.Text = "⏳ Cargando...";
 
-                var fecha = new DateTime(DateTime.Now.Year, cboMes.SelectedIndex + 1, 1);
+                int añoSeleccionado = cboAño.SelectedItem != null ? (int)cboAño.SelectedItem : DateTime.Now.Year;
+                var fecha = new DateTime(añoSeleccionado, cboMes.SelectedIndex + 1, 1);
                 var resumen = await _excelService.ObtenerResumenMensualAsync(fecha);
 
                 ActualizarEstadisticas(resumen);
@@ -266,9 +443,87 @@ namespace Gastos.Views
 
         private void ActualizarEstadisticas(ResumenMensual resumen)
         {
-            lblTotalGastos.Text = $"${resumen.TotalGastos:N2}";
-            lblPromedioGastos.Text = $"${resumen.PromedioGastos:N2}";
+            lblTotalGastos.Text = $"${resumen.TotalGastado:N2}";
+            lblPromedioGastos.Text = $"${resumen.PromedioGasto:N2}";
             lblCantidadGastos.Text = resumen.CantidadGastos.ToString();
+            
+            // Actualizar panel de deuda
+            if (!string.IsNullOrEmpty(resumen.DeudorNombre) && resumen.DeudorMonto > 0)
+            {
+                // Actualizar título del panel de deuda
+                var panelDeuda = lblDeuda.Parent;
+                var lblTituloDeuda = panelDeuda.Controls[0] as Label;
+                if (lblTituloDeuda != null)
+                {
+                    lblTituloDeuda.Text = $"💳 Debe {resumen.DeudorNombre}";
+                }
+                lblDeuda.Text = $"${resumen.DeudorMonto:N2}";
+            }
+            else
+            {
+                lblDeuda.Text = "$0.00";
+            }
+
+            // Actualizar sueldos
+            txtSueldoAndrea.Value = resumen.SueldoAndrea;
+            txtSueldoJuan.Value = resumen.SueldoJuan;
+            lblSueldoTotal.Text = $"${resumen.SueldoTotal:N2}";
+            lblPorcentajeAndrea.Text = $"{resumen.PorcentajeAndrea:N0}%";
+            lblPorcentajeJuan.Text = $"{resumen.PorcentajeJuan:N0}%";
+        }
+
+        private void ActualizarCalculosSueldos()
+        {
+            decimal total = txtSueldoAndrea.Value + txtSueldoJuan.Value;
+            lblSueldoTotal.Text = $"${total:N2}";
+
+            if (total > 0)
+            {
+                decimal pctAndrea = (txtSueldoAndrea.Value / total) * 100;
+                decimal pctJuan = (txtSueldoJuan.Value / total) * 100;
+                lblPorcentajeAndrea.Text = $"{pctAndrea:N0}%";
+                lblPorcentajeJuan.Text = $"{pctJuan:N0}%";
+            }
+            else
+            {
+                lblPorcentajeAndrea.Text = "0%";
+                lblPorcentajeJuan.Text = "0%";
+            }
+        }
+
+        private async void BtnGuardarSueldos_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                btnGuardarSueldos.Enabled = false;
+                btnGuardarSueldos.Text = "⏳ Guardando...";
+
+                int añoSeleccionado = cboAño.SelectedItem != null ? (int)cboAño.SelectedItem : DateTime.Now.Year;
+                var fecha = new DateTime(añoSeleccionado, cboMes.SelectedIndex + 1, 1);
+
+                bool resultado = await _excelService.GuardarSueldosAsync(fecha, txtSueldoAndrea.Value, txtSueldoJuan.Value);
+
+                if (resultado)
+                {
+                    MessageBox.Show("Sueldos guardados correctamente", "Éxito",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Error al guardar sueldos", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al guardar sueldos: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnGuardarSueldos.Enabled = true;
+                btnGuardarSueldos.Text = "💾 Guardar";
+            }
         }
 
         private void ActualizarGraficos(ResumenMensual resumen)
@@ -300,7 +555,8 @@ namespace Gastos.Views
 
         private void BtnVerDetalles_Click(object sender, EventArgs e)
         {
-            var fecha = new DateTime(DateTime.Now.Year, cboMes.SelectedIndex + 1, 1);
+            int añoSeleccionado = cboAño.SelectedItem != null ? (int)cboAño.SelectedItem : DateTime.Now.Year;
+            var fecha = new DateTime(añoSeleccionado, cboMes.SelectedIndex + 1, 1);
             var formDetalles = new FormDetalles(_excelService, fecha);
             formDetalles.ShowDialog();
         }

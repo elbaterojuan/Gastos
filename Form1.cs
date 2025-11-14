@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Configuration;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using Gastos.Models;
 using Gastos.Services;
 using Gastos.Utils;
@@ -30,10 +33,11 @@ namespace Gastos
         {
             try
             {
-                _excelService = new ExcelService(
-                    Properties.Settings.Default.Carpeta,
-                    Properties.Settings.Default.Archivo
-                );
+                // Usar el directorio de la aplicación
+                string directorioApp = AppDomain.CurrentDomain.BaseDirectory;
+                string nombreArchivo = "Gastos.xlsm";
+                
+                _excelService = new ExcelService(directorioApp, nombreArchivo);
             }
             catch (Exception ex)
             {
@@ -58,7 +62,6 @@ namespace Gastos
             label4.AplicarEstiloLabel();
             label5.AplicarEstiloLabel();
             label6.AplicarEstiloLabel();
-            label7.AplicarEstiloLabel();
             
             // Estilos de controles
             textBox1.AplicarEstiloTextBox();
@@ -75,20 +78,52 @@ namespace Gastos
             label1.Text = "📅 Fecha";
             label2.Text = "🏷️ Categoría";
             label3.Text = "💰 Monto";
-            label4.Text = "👤 Quién pagó?";
-            label5.Text = "⚖️ Gasto Proporcional?";
+            label4.Text = "👤 Quién Pagó";
+            label5.Text = "� ¿Gasto Proporcional?";
             label6.Text = "📝 Comentarios";
-            label7.Text = "🔢 Cuotas";
+            
+            // Ocultar control de cuotas si existe
+            if (label7 != null) label7.Visible = false;
+            if (cuotas != null) cuotas.Visible = false;
         }
 
         private void ConfigurarControles()
         {
             dateTimePicker1.Value = DateTime.Now;
             
-            // Cargar categorías
-            string[] categorias = new string[Properties.Settings.Default.Categorias.Count];
-            Properties.Settings.Default.Categorias.CopyTo(categorias, 0);
-            comboBox1.Items.AddRange(categorias);
+            // Configurar formato de moneda
+            var culture = new CultureInfo("es-AR"); // Argentina usa $
+            culture.NumberFormat.CurrencySymbol = "$";
+            numericUpDown1.Text = culture.NumberFormat.CurrencySymbol;
+            
+            // Cargar categorías directamente desde el archivo .exe.config
+            comboBox1.Items.Clear();
+            
+            try
+            {
+                var configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
+                var configDoc = XDocument.Load(configPath);
+                
+                var categoriasElement = configDoc.Descendants("setting")
+                    .FirstOrDefault(s => s.Attribute("name")?.Value == "Categorias");
+                
+                if (categoriasElement != null)
+                {
+                    var arrayOfString = categoriasElement.Descendants("string");
+                    foreach (var categoria in arrayOfString)
+                    {
+                        comboBox1.Items.Add(categoria.Value);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al cargar categorías: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            
+            // Configurar checkbox con valor por defecto
+            checkBox1.Checked = true;
             
             // Configurar timer para ocultar mensaje de éxito
             _timer = new System.Windows.Forms.Timer { Interval = 3000 };
@@ -96,8 +131,8 @@ namespace Gastos
             
             // Tooltips informativos
             var tooltip = new ToolTip();
-            tooltip.SetToolTip(checkBox1, "Si está marcado, el gasto se dividirá proporcionalmente");
-            tooltip.SetToolTip(cuotas, "Número de cuotas para pagos diferidos");
+            tooltip.SetToolTip(checkBox1, "Marcar si el gasto debe dividirse proporcionalmente");
+            tooltip.SetToolTip(textBox1, "Comentarios adicionales sobre el gasto");
         }
 
         private async void button1_Click(object sender, EventArgs e)
@@ -116,7 +151,6 @@ namespace Gastos
                     Monto = numericUpDown1.Value,
                     QuienPago = comboBox2.Text,
                     EsProporcional = checkBox1.Checked,
-                    Cuotas = (int)cuotas.Value,
                     Comentarios = textBox1.Text
                 };
 

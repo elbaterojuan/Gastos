@@ -10,13 +10,10 @@ namespace Gastos
     public partial class FormMenuPrincipal : Form
     {
         private ExcelService _excelService;
-        private Panel panelHeader;
-        private Panel panelButtons;
+        private Label lblTitulo;
         private Button btnAgregarGasto;
         private Button btnDashboard;
         private Button btnSalir;
-        private Label lblTitulo;
-        private Label lblSubtitulo;
 
         public FormMenuPrincipal()
         {
@@ -26,135 +23,88 @@ namespace Gastos
 
         private void InitializeComponent()
         {
-            this.Size = new Size(600, 500);
-            this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "Sistema de Gestión de Gastos";
+            this.Size = new Size(500, 400);
+            this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = TemaColores.FondoClaro;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
+            this.MinimizeBox = true;
 
-            CrearHeader();
-            CrearBotones();
+            // Título
+            lblTitulo = new Label
+            {
+                Text = "💰 Sistema de Gestión de Gastos",
+                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                ForeColor = TemaColores.TextoOscuro,
+                AutoSize = false,
+                Size = new Size(450, 50),
+                Location = new Point(25, 20),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            // Botón Dashboard
+            btnDashboard = new Button
+            {
+                Text = "📊 Ver Dashboard",
+                Size = new Size(400, 60),
+                Location = new Point(50, 90),
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnDashboard.AplicarEstiloBotonPrimario();
+            btnDashboard.Click += BtnDashboard_Click;
+
+            // Botón Agregar Gasto
+            btnAgregarGasto = new Button
+            {
+                Text = "➕ Agregar Gasto",
+                Size = new Size(400, 60),
+                Location = new Point(50, 170),
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnAgregarGasto.BackColor = TemaColores.SecundarioVerde;
+            btnAgregarGasto.ForeColor = Color.White;
+            btnAgregarGasto.FlatStyle = FlatStyle.Flat;
+            btnAgregarGasto.FlatAppearance.BorderSize = 0;
+            btnAgregarGasto.Click += BtnAgregarGasto_Click;
+
+            // Botón Salir
+            btnSalir = new Button
+            {
+                Text = "🚪 Salir",
+                Size = new Size(400, 50),
+                Location = new Point(50, 250),
+                Font = new Font("Segoe UI", 11F),
+                Cursor = Cursors.Hand
+            };
+            btnSalir.AplicarEstiloBotonSecundario();
+            btnSalir.Click += (s, e) => this.Close();
+
+            // Agregar controles al formulario
+            this.Controls.Add(lblTitulo);
+            this.Controls.Add(btnDashboard);
+            this.Controls.Add(btnAgregarGasto);
+            this.Controls.Add(btnSalir);
         }
 
         private void InicializarServicios()
         {
             try
             {
-                _excelService = new ExcelService(
-                    Properties.Settings.Default.Carpeta,
-                    Properties.Settings.Default.Archivo
-                );
+                // Usar el directorio de la aplicación
+                string directorioApp = AppDomain.CurrentDomain.BaseDirectory;
+                string nombreArchivo = "Gastos.xlsm";
+                
+                _excelService = new ExcelService(directorioApp, nombreArchivo);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al inicializar Excel:\n{ex.Message}\n\nVerifique la configuración en Settings.",
+                MessageBox.Show($"Error al inicializar:\n{ex.Message}\n\nArchivo: Gastos.xlsm\nUbicación: {AppDomain.CurrentDomain.BaseDirectory}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Application.Exit();
             }
-        }
-
-        private void CrearHeader()
-        {
-            panelHeader = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 150,
-                BackColor = TemaColores.PrimarioAzul
-            };
-
-            lblTitulo = new Label
-            {
-                Text = "💰 Gestión de Gastos",
-                Font = new Font("Segoe UI", 24F, FontStyle.Bold),
-                ForeColor = Color.White,
-                AutoSize = true,
-                Location = new Point(150, 40)
-            };
-
-            lblSubtitulo = new Label
-            {
-                Text = "Sistema moderno de control de gastos personales",
-                Font = new Font("Segoe UI", 11F),
-                ForeColor = Color.FromArgb(200, 255, 255, 255),
-                AutoSize = true,
-                Location = new Point(140, 85)
-            };
-
-            panelHeader.Controls.AddRange(new Control[] { lblTitulo, lblSubtitulo });
-            this.Controls.Add(panelHeader);
-        }
-
-        private void CrearBotones()
-        {
-            panelButtons = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(80, 40, 80, 40)
-            };
-
-            // Botón Dashboard
-            btnDashboard = CrearBotonMenu(
-                "📊 Dashboard",
-                "Ver estadísticas y gráficos de gastos",
-                TemaColores.PrimarioAzul,
-                0
-            );
-            btnDashboard.Click += BtnDashboard_Click;
-
-            // Botón Agregar Gasto
-            btnAgregarGasto = CrearBotonMenu(
-                "➕ Agregar Gasto",
-                "Registrar un nuevo gasto en Excel",
-                TemaColores.SecundarioVerde,
-                100
-            );
-            btnAgregarGasto.Click += BtnAgregarGasto_Click;
-
-            // Botón Salir
-            btnSalir = CrearBotonMenu(
-                "🚪 Salir",
-                "Cerrar la aplicación",
-                TemaColores.TextoGris,
-                200
-            );
-            btnSalir.Click += (s, e) => Application.Exit();
-
-            panelButtons.Controls.AddRange(new Control[] { btnDashboard, btnAgregarGasto, btnSalir });
-            this.Controls.Add(panelButtons);
-        }
-
-        private Button CrearBotonMenu(string texto, string tooltip, Color color, int yOffset)
-        {
-            var btn = new Button
-            {
-                Text = texto,
-                Size = new Size(420, 60),
-                Location = new Point(10, yOffset),
-                BackColor = color,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(20, 0, 0, 0)
-            };
-            btn.FlatAppearance.BorderSize = 0;
-
-            var tooltipControl = new ToolTip();
-            tooltipControl.SetToolTip(btn, tooltip);
-
-            var colorOriginal = color;
-            var colorHover = Color.FromArgb(
-                Math.Max(0, color.R - 30),
-                Math.Max(0, color.G - 30),
-                Math.Max(0, color.B - 30)
-            );
-
-            btn.MouseEnter += (s, e) => btn.BackColor = colorHover;
-            btn.MouseLeave += (s, e) => btn.BackColor = colorOriginal;
-
-            return btn;
         }
 
         private void BtnDashboard_Click(object sender, EventArgs e)

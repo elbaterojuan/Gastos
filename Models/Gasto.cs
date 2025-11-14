@@ -12,14 +12,12 @@ namespace Gastos.Models
         public decimal Monto { get; set; }
         public string QuienPago { get; set; }
         public bool EsProporcional { get; set; }
-        public int Cuotas { get; set; }
         public string Comentarios { get; set; }
 
         public Gasto()
         {
             Fecha = DateTime.Now;
-            Cuotas = 1;
-            EsProporcional = true;
+            EsProporcional = false;
         }
 
         public override string ToString()

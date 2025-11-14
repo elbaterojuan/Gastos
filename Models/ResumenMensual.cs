@@ -10,11 +10,18 @@ namespace Gastos.Models
     {
         public int Mes { get; set; }
         public int Año { get; set; }
-        public decimal TotalGastos { get; set; }
-        public decimal PromedioGastos { get; set; }
+        public decimal TotalGastado { get; set; }
+        public decimal PromedioGasto { get; set; }
         public int CantidadGastos { get; set; }
         public Dictionary<string, decimal> GastosPorCategoria { get; set; }
         public Dictionary<string, decimal> GastosPorPersona { get; set; }
+        public string DeudorNombre { get; set; }
+        public decimal DeudorMonto { get; set; }
+        public decimal SueldoAndrea { get; set; }
+        public decimal SueldoJuan { get; set; }
+        public decimal SueldoTotal { get; set; }
+        public decimal PorcentajeAndrea { get; set; }
+        public decimal PorcentajeJuan { get; set; }
 
         public ResumenMensual()
         {

@@ -112,6 +112,12 @@ namespace Gastos.Services
                         // Formatear monto como moneda
                         worksheet.Cells[newRow, 3].Style.Numberformat.Format = "$#,##0.00";
                         
+                        // Forzar recálculo de fórmulas
+                        package.Workbook.Calculate();
+                        // Marcar para recalcular al abrir en Excel
+                        package.Workbook.CalcMode = ExcelCalcMode.Automatic;
+                        package.Workbook.Properties.Modified = DateTime.Now;
+                        
                         package.Save();
                         return true;
                     }
@@ -332,6 +338,9 @@ namespace Gastos.Services
 
                     using (var package = new ExcelPackage(new FileInfo(_excelPath)))
                     {
+                        // Calcular todas las fórmulas antes de leer
+                        package.Workbook.Calculate();
+                        
                         var worksheet = BuscarHojaMes(package, fecha);
                         if (worksheet == null || worksheet.Dimension == null)
                             return;
@@ -400,6 +409,9 @@ namespace Gastos.Services
 
                     using (var package = new ExcelPackage(new FileInfo(_excelPath)))
                     {
+                        // Calcular todas las fórmulas antes de leer
+                        package.Workbook.Calculate();
+                        
                         var worksheet = BuscarHojaMes(package, fecha);
                         if (worksheet == null || worksheet.Dimension == null)
                             return;
@@ -455,6 +467,9 @@ namespace Gastos.Services
 
                     using (var package = new ExcelPackage(new FileInfo(_excelPath)))
                     {
+                        // Calcular todas las fórmulas antes de leer
+                        package.Workbook.Calculate();
+                        
                         var worksheet = BuscarHojaMes(package, fecha);
                         if (worksheet == null || worksheet.Dimension == null)
                             return;
@@ -548,6 +563,12 @@ namespace Gastos.Services
                         worksheet.Cells[7, 11].Value = sueldoAndrea;
                         worksheet.Cells[8, 11].Value = sueldoJuan;
 
+                        // Forzar recálculo de fórmulas
+                        package.Workbook.Calculate();
+                        // Marcar para recalcular al abrir en Excel
+                        package.Workbook.CalcMode = ExcelCalcMode.Automatic;
+                        package.Workbook.Properties.Modified = DateTime.Now;
+                        
                         package.Save();
                         return true;
                     }

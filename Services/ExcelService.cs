@@ -88,94 +88,11 @@ namespace Gastos.Services
                         
                         if (worksheet == null)
                         {
-                            // Buscar la última hoja existente para usar como plantilla
-                            var ultimaHoja = package.Workbook.Worksheets
-                                .OrderByDescending(w => w.Name)
-                                .FirstOrDefault();
+                            // Crear todas las hojas faltantes desde la última existente hasta la requerida
+                            CrearHojasFaltantes(package, gasto.Fecha);
                             
-                            if (ultimaHoja != null)
-                            {
-                                // Copiar la última hoja completa (con fórmulas y formato)
-                                worksheet = package.Workbook.Worksheets.Add(nombreHoja, ultimaHoja);
-                                
-                                // Limpiar solo los datos de gastos (columnas A, B, C, D, E, H desde fila 2)
-                                if (worksheet.Dimension != null)
-                                {
-                                    int ultimaFilaCopiada = worksheet.Dimension.End.Row;
-                                    
-                                    // Borrar contenido de las columnas de gastos
-                                    for (int row = 2; row <= ultimaFilaCopiada; row++)
-                                    {
-                                        worksheet.Cells[row, 1].Value = null; // Fecha
-                                        worksheet.Cells[row, 2].Value = null; // Categoría
-                                        worksheet.Cells[row, 3].Value = null; // Monto
-                                        worksheet.Cells[row, 4].Value = null; // QuienPago
-                                        worksheet.Cells[row, 5].Value = null; // EsProporcional
-                                        worksheet.Cells[row, 8].Value = null; // Comentarios
-                                    }
-                                }
-                                
-                                // Actualizar fórmulas M2 y N2 con referencia al mes anterior
-                                try
-                                {
-                                    var mesAnterior = gasto.Fecha.AddMonths(-1);
-                                    var nombreMesAnterior = mesAnterior.ToString("MMMM", new System.Globalization.CultureInfo("es-ES"));
-                                    var añoAnteriorCorto = mesAnterior.Year.ToString().Substring(2);
-                                    var nombreHojaAnterior = $"{nombreMesAnterior}-{añoAnteriorCorto}";
-                                    
-                                    // Verificar si la hoja anterior existe
-                                    var hojaAnteriorExiste = package.Workbook.Worksheets[nombreHojaAnterior] != null;
-                                    
-                                    if (hojaAnteriorExiste)
-                                    {
-                                        // Actualizar fórmula M2 (Debe Andrea)
-                                        worksheet.Cells["M2"].Formula = $"=SUM(F2:F50)-K2+'{nombreHojaAnterior}'!M2";
-                                        
-                                        // Actualizar fórmula N2 (Debe Juan)
-                                        worksheet.Cells["N2"].Formula = $"=SUM(G2:G50)-L2+'{nombreHojaAnterior}'!N2";
-                                    }
-                                    else
-                                    {
-                                        // Si es el primer mes, usar solo la suma sin referencia anterior
-                                        worksheet.Cells["M2"].Formula = "=SUM(F2:F50)-K2";
-                                        worksheet.Cells["N2"].Formula = "=SUM(G2:G50)-L2";
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"No se pudieron actualizar las fórmulas M2/N2: {ex.Message}");
-                                }
-                            }
-                            else
-                            {
-                                // Si no hay hojas existentes, crear una básica
-                                worksheet = package.Workbook.Worksheets.Add(nombreHoja);
-                                
-                                // Crear encabezados
-                                worksheet.Cells[1, 1].Value = "Fecha";
-                                worksheet.Cells[1, 2].Value = "Categoría";
-                                worksheet.Cells[1, 3].Value = "Monto";
-                                worksheet.Cells[1, 4].Value = "QuienPago";
-                                worksheet.Cells[1, 5].Value = "EsProporcional";
-                                worksheet.Cells[1, 8].Value = "Comentarios";
-                                
-                                // Aplicar estilo a encabezados
-                                using (var range = worksheet.Cells[1, 1, 1, 8])
-                                {
-                                    range.Style.Font.Bold = true;
-                                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(37, 99, 235));
-                                    range.Style.Font.Color.SetColor(System.Drawing.Color.White);
-                                }
-                                
-                                // Ajustar ancho de columnas
-                                worksheet.Column(1).Width = 12;
-                                worksheet.Column(2).Width = 20;
-                                worksheet.Column(3).Width = 12;
-                                worksheet.Column(4).Width = 15;
-                                worksheet.Column(5).Width = 15;
-                                worksheet.Column(8).Width = 35;
-                            }
+                            // Ahora obtener la hoja que acabamos de crear
+                            worksheet = package.Workbook.Worksheets[nombreHoja];
                         }
                         
                         // Encontrar última fila
@@ -641,6 +558,190 @@ namespace Gastos.Services
                     return false;
                 }
             });
+        }
+
+        /// <summary>
+        /// Crea todas las hojas faltantes desde la última existente hasta la fecha requerida
+        /// </summary>
+        private void CrearHojasFaltantes(ExcelPackage package, DateTime fechaDestino)
+        {
+            // Obtener la última hoja existente
+            var ultimaHoja = package.Workbook.Worksheets
+                .OrderByDescending(w => w.Name)
+                .FirstOrDefault();
+            
+            DateTime fechaInicio;
+            
+            if (ultimaHoja != null)
+            {
+                // Intentar extraer la fecha de la última hoja
+                fechaInicio = ExtraerFechaDeNombreHoja(ultimaHoja.Name);
+                
+                // Si no se pudo extraer, empezar desde el mes siguiente a la fecha actual
+                if (fechaInicio == DateTime.MinValue)
+                {
+                    fechaInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                }
+                else
+                {
+                    // Empezar desde el siguiente mes
+                    fechaInicio = fechaInicio.AddMonths(1);
+                }
+            }
+            else
+            {
+                // No hay hojas, crear desde la fecha destino
+                fechaInicio = new DateTime(fechaDestino.Year, fechaDestino.Month, 1);
+            }
+            
+            // Normalizar fechaDestino al primer día del mes
+            DateTime fechaFin = new DateTime(fechaDestino.Year, fechaDestino.Month, 1);
+            
+            // Crear todas las hojas desde fechaInicio hasta fechaFin
+            DateTime fechaActual = fechaInicio;
+            while (fechaActual <= fechaFin)
+            {
+                string nombreHojaNueva = ObtenerNombreHoja(fechaActual);
+                
+                // Verificar si la hoja ya existe
+                if (package.Workbook.Worksheets[nombreHojaNueva] == null)
+                {
+                    CrearHojaNueva(package, fechaActual);
+                }
+                
+                fechaActual = fechaActual.AddMonths(1);
+            }
+        }
+        
+        /// <summary>
+        /// Crea una nueva hoja copiando la plantilla de la última hoja existente
+        /// </summary>
+        private void CrearHojaNueva(ExcelPackage package, DateTime fecha)
+        {
+            string nombreHoja = ObtenerNombreHoja(fecha);
+            
+            // Buscar la última hoja existente para usar como plantilla
+            var ultimaHoja = package.Workbook.Worksheets
+                .OrderByDescending(w => w.Name)
+                .FirstOrDefault();
+            
+            ExcelWorksheet worksheet;
+            
+            if (ultimaHoja != null)
+            {
+                // Copiar la última hoja completa (con fórmulas y formato)
+                worksheet = package.Workbook.Worksheets.Add(nombreHoja, ultimaHoja);
+                
+                // Limpiar solo los datos de gastos (columnas A, B, C, D, E, H desde fila 2)
+                if (worksheet.Dimension != null)
+                {
+                    int ultimaFilaCopiada = worksheet.Dimension.End.Row;
+                    
+                    // Borrar contenido de las columnas de gastos
+                    for (int row = 2; row <= ultimaFilaCopiada; row++)
+                    {
+                        worksheet.Cells[row, 1].Value = null; // Fecha
+                        worksheet.Cells[row, 2].Value = null; // Categoría
+                        worksheet.Cells[row, 3].Value = null; // Monto
+                        worksheet.Cells[row, 4].Value = null; // QuienPago
+                        worksheet.Cells[row, 5].Value = null; // EsProporcional
+                        worksheet.Cells[row, 8].Value = null; // Comentarios
+                    }
+                }
+                
+                // Actualizar fórmulas M2 y N2 con referencia al mes anterior
+                try
+                {
+                    var mesAnterior = fecha.AddMonths(-1);
+                    var nombreHojaAnterior = ObtenerNombreHoja(mesAnterior);
+                    
+                    // Verificar si la hoja anterior existe
+                    var hojaAnteriorExiste = package.Workbook.Worksheets[nombreHojaAnterior] != null;
+                    
+                    if (hojaAnteriorExiste)
+                    {
+                        // Actualizar fórmula M2 (Debe Andrea)
+                        worksheet.Cells["M2"].Formula = $"=SUM(F2:F50)-K2+'{nombreHojaAnterior}'!M2";
+                        
+                        // Actualizar fórmula N2 (Debe Juan)
+                        worksheet.Cells["N2"].Formula = $"=SUM(G2:G50)-L2+'{nombreHojaAnterior}'!N2";
+                    }
+                    else
+                    {
+                        // Si es el primer mes, usar solo la suma sin referencia anterior
+                        worksheet.Cells["M2"].Formula = "=SUM(F2:F50)-K2";
+                        worksheet.Cells["N2"].Formula = "=SUM(G2:G50)-L2";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"No se pudieron actualizar las fórmulas M2/N2: {ex.Message}");
+                }
+            }
+            else
+            {
+                // Si no hay hojas existentes, crear una básica
+                worksheet = package.Workbook.Worksheets.Add(nombreHoja);
+                
+                // Crear encabezados
+                worksheet.Cells[1, 1].Value = "Fecha";
+                worksheet.Cells[1, 2].Value = "Categoría";
+                worksheet.Cells[1, 3].Value = "Monto";
+                worksheet.Cells[1, 4].Value = "QuienPago";
+                worksheet.Cells[1, 5].Value = "EsProporcional";
+                worksheet.Cells[1, 8].Value = "Comentarios";
+                
+                // Aplicar estilo a encabezados
+                using (var range = worksheet.Cells[1, 1, 1, 8])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(37, 99, 235));
+                    range.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                }
+                
+                // Ajustar ancho de columnas
+                worksheet.Column(1).Width = 12;
+                worksheet.Column(2).Width = 20;
+                worksheet.Column(3).Width = 12;
+                worksheet.Column(4).Width = 15;
+                worksheet.Column(5).Width = 15;
+                worksheet.Column(8).Width = 35;
+            }
+        }
+        
+        /// <summary>
+        /// Extrae la fecha de un nombre de hoja con formato "Mes-AA"
+        /// </summary>
+        private DateTime ExtraerFechaDeNombreHoja(string nombreHoja)
+        {
+            try
+            {
+                // Formato esperado: "Mayo-25" o "Diciembre-27"
+                var partes = nombreHoja.Split('-');
+                if (partes.Length != 2)
+                    return DateTime.MinValue;
+                
+                string nombreMes = partes[0].Trim();
+                string año = partes[1].Trim();
+                
+                // Convertir nombre del mes a número
+                string[] meses = { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+                
+                int mes = Array.IndexOf(meses, nombreMes) + 1;
+                if (mes == 0)
+                    return DateTime.MinValue;
+                
+                // Convertir año corto a año completo (asumiendo 20XX)
+                int añoCompleto = 2000 + int.Parse(año);
+                
+                return new DateTime(añoCompleto, mes, 1);
+            }
+            catch
+            {
+                return DateTime.MinValue;
+            }
         }
 
         public string RutaArchivo => _excelPath;

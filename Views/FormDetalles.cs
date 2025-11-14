@@ -22,6 +22,9 @@ namespace Gastos.Views
         private TextBox txtBuscar;
         private ComboBox cboCategoria;
         private Button btnExportar;
+        private Button btnMesAnterior;
+        private Button btnMesSiguiente;
+        private Label lblTitulo;
         private Label lblTotal;
 
         public FormDetalles(ExcelService excelService, DateTime fecha)
@@ -33,7 +36,7 @@ namespace Gastos.Views
 
         private void InitializeComponent()
         {
-            this.Size = new Size(1000, 600);
+            this.WindowState = FormWindowState.Maximized;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = $"Detalle de Gastos - {_fecha:MMMM yyyy}";
             this.BackColor = TemaColores.FondoClaro;
@@ -55,7 +58,7 @@ namespace Gastos.Views
                 Padding = new Padding(20)
             };
 
-            var lblTitulo = new Label
+            lblTitulo = new Label
             {
                 Text = $"📋 Detalle de Gastos - {_fecha:MMMM yyyy}",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
@@ -64,16 +67,46 @@ namespace Gastos.Views
                 Location = new Point(20, 20)
             };
 
+            // Botón mes anterior
+            btnMesAnterior = new Button
+            {
+                Text = "◀",
+                Location = new Point(500, 18),
+                Size = new Size(45, 35),
+                BackColor = Color.White,
+                ForeColor = TemaColores.PrimarioAzul,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnMesAnterior.FlatAppearance.BorderSize = 0;
+            btnMesAnterior.Click += BtnMesAnterior_Click;
+
+            // Botón mes siguiente
+            btnMesSiguiente = new Button
+            {
+                Text = "▶",
+                Location = new Point(550, 18),
+                Size = new Size(45, 35),
+                BackColor = Color.White,
+                ForeColor = TemaColores.PrimarioAzul,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnMesSiguiente.FlatAppearance.BorderSize = 0;
+            btnMesSiguiente.Click += BtnMesSiguiente_Click;
+
             lblTotal = new Label
             {
                 Text = "Total: $0.00",
                 Font = new Font("Segoe UI", 14F, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Location = new Point(700, 22)
+                Location = new Point(650, 22)
             };
 
-            panelHeader.Controls.AddRange(new Control[] { lblTitulo, lblTotal });
+            panelHeader.Controls.AddRange(new Control[] { lblTitulo, btnMesAnterior, btnMesSiguiente, lblTotal });
             this.Controls.Add(panelHeader);
         }
 
@@ -249,6 +282,22 @@ namespace Gastos.Views
 
             var total = gastos.Sum(g => g.Monto);
             lblTotal.Text = $"Total: ${total:N2}";
+        }
+
+        private async void BtnMesAnterior_Click(object sender, EventArgs e)
+        {
+            _fecha = _fecha.AddMonths(-1);
+            lblTitulo.Text = $"📋 Detalle de Gastos - {_fecha:MMMM yyyy}";
+            this.Text = $"Detalle de Gastos - {_fecha:MMMM yyyy}";
+            CargarDatos();
+        }
+
+        private async void BtnMesSiguiente_Click(object sender, EventArgs e)
+        {
+            _fecha = _fecha.AddMonths(1);
+            lblTitulo.Text = $"📋 Detalle de Gastos - {_fecha:MMMM yyyy}";
+            this.Text = $"Detalle de Gastos - {_fecha:MMMM yyyy}";
+            CargarDatos();
         }
 
         private void BtnExportar_Click(object sender, EventArgs e)

@@ -13,11 +13,13 @@ namespace Gastos.Models
         public string QuienPago { get; set; }
         public bool EsProporcional { get; set; }
         public string Comentarios { get; set; }
+        public int CantidadCuotas { get; set; }
 
         public Gasto()
         {
             Fecha = DateTime.Now;
             EsProporcional = false;
+            CantidadCuotas = 1;
         }
 
         public override string ToString()

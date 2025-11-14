@@ -34,6 +34,8 @@ namespace Gastos.Views
         private ComboBox cboAño;
         private Button btnActualizar;
         private Button btnVerDetalles;
+        private Button btnMesAnterior;
+        private Button btnMesSiguiente;
 
         public FormDashboard(ExcelService excelService)
         {
@@ -43,7 +45,7 @@ namespace Gastos.Views
 
         private void InitializeComponent()
         {
-            this.Size = new Size(1200, 750);
+            this.WindowState = FormWindowState.Maximized;
             this.MinimumSize = new Size(1000, 600);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "Dashboard de Gastos";
@@ -56,6 +58,12 @@ namespace Gastos.Views
             CrearPanelEstadisticas();  // Luego Top
             CrearHeader();  // Finalmente Top (queda arriba de todo)
             CargarDatosIniciales();
+            
+            // Establecer foco al inicio después de cargar
+            this.Load += (s, e) => {
+                this.AutoScrollPosition = new Point(0, 0);
+                cboMes.Focus();
+            };
         }
 
         private void CrearHeader()
@@ -113,10 +121,40 @@ namespace Gastos.Views
             cboAño.SelectedItem = añoActual;
             cboAño.SelectedIndexChanged += async (s, e) => await CargarDatos();
 
+            // Botón mes anterior
+            btnMesAnterior = new Button
+            {
+                Text = "◀",
+                Location = new Point(640, 25),
+                Size = new Size(45, 35),
+                BackColor = Color.White,
+                ForeColor = TemaColores.PrimarioAzul,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnMesAnterior.FlatAppearance.BorderSize = 0;
+            btnMesAnterior.Click += BtnMesAnterior_Click;
+
+            // Botón mes siguiente
+            btnMesSiguiente = new Button
+            {
+                Text = "▶",
+                Location = new Point(690, 25),
+                Size = new Size(45, 35),
+                BackColor = Color.White,
+                ForeColor = TemaColores.PrimarioAzul,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnMesSiguiente.FlatAppearance.BorderSize = 0;
+            btnMesSiguiente.Click += BtnMesSiguiente_Click;
+
             btnActualizar = new Button
             {
                 Text = "🔄 Actualizar",
-                Location = new Point(640, 25),
+                Location = new Point(760, 25),
                 Size = new Size(120, 35),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = TemaColores.SecundarioVerde,
@@ -130,7 +168,7 @@ namespace Gastos.Views
             btnVerDetalles = new Button
             {
                 Text = "📋 Ver Detalles",
-                Location = new Point(780, 25),
+                Location = new Point(900, 25),
                 Size = new Size(140, 35),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
@@ -141,7 +179,7 @@ namespace Gastos.Views
             btnVerDetalles.FlatAppearance.BorderSize = 0;
             btnVerDetalles.Click += BtnVerDetalles_Click;
 
-            panelHeader.Controls.AddRange(new Control[] { lblTitulo, cboMes, cboAño, btnActualizar, btnVerDetalles });
+            panelHeader.Controls.AddRange(new Control[] { lblTitulo, cboMes, cboAño, btnMesAnterior, btnMesSiguiente, btnActualizar, btnVerDetalles });
             this.Controls.Add(panelHeader);
         }
 
@@ -549,6 +587,38 @@ namespace Gastos.Views
                 foreach (var item in resumen.GastosPorPersona)
                 {
                     chartPersonas.Series[0].Points.AddXY(item.Key, item.Value);
+                }
+            }
+        }
+
+        private async void BtnMesAnterior_Click(object sender, EventArgs e)
+        {
+            if (cboMes.SelectedIndex > 0)
+            {
+                cboMes.SelectedIndex--;
+            }
+            else
+            {
+                cboMes.SelectedIndex = 11;
+                if (cboAño.SelectedIndex > 0)
+                {
+                    cboAño.SelectedIndex--;
+                }
+            }
+        }
+
+        private async void BtnMesSiguiente_Click(object sender, EventArgs e)
+        {
+            if (cboMes.SelectedIndex < 11)
+            {
+                cboMes.SelectedIndex++;
+            }
+            else
+            {
+                cboMes.SelectedIndex = 0;
+                if (cboAño.SelectedIndex < cboAño.Items.Count - 1)
+                {
+                    cboAño.SelectedIndex++;
                 }
             }
         }

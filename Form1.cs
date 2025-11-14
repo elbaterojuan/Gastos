@@ -79,12 +79,9 @@ namespace Gastos
             label2.Text = "🏷️ Categoría";
             label3.Text = "💰 Monto";
             label4.Text = "👤 Quién Pagó";
-            label5.Text = "� ¿Gasto Proporcional?";
+            label7.Text = "🔢 Cuotas";
+            label5.Text = "⚖️ ¿Gasto Proporcional?";
             label6.Text = "📝 Comentarios";
-            
-            // Ocultar control de cuotas si existe
-            if (label7 != null) label7.Visible = false;
-            if (cuotas != null) cuotas.Visible = false;
         }
 
         private void ConfigurarControles()
@@ -95,6 +92,11 @@ namespace Gastos
             var culture = new CultureInfo("es-AR"); // Argentina usa $
             culture.NumberFormat.CurrencySymbol = "$";
             numericUpDown1.Text = culture.NumberFormat.CurrencySymbol;
+            
+            // Configurar cuotas con valor por defecto 1
+            cuotas.Value = 1;
+            cuotas.Minimum = 1;
+            cuotas.Maximum = 36;
             
             // Cargar categorías directamente desde el archivo .exe.config
             comboBox1.Items.Clear();
@@ -144,17 +146,30 @@ namespace Gastos
                 button1.Enabled = false;
                 button1.Text = "⏳ Guardando...";
 
-                var gasto = new Gasto
+                int cantidadCuotas = (int)cuotas.Value;
+                decimal montoPorCuota = numericUpDown1.Value / cantidadCuotas;
+                
+                // Procesar cada cuota
+                for (int i = 1; i <= cantidadCuotas; i++)
                 {
-                    Fecha = dateTimePicker1.Value,
-                    Categoria = comboBox1.Text,
-                    Monto = numericUpDown1.Value,
-                    QuienPago = comboBox2.Text,
-                    EsProporcional = checkBox1.Checked,
-                    Comentarios = textBox1.Text
-                };
+                    var fechaCuota = dateTimePicker1.Value.AddMonths(i - 1);
+                    var comentarioCuota = string.IsNullOrWhiteSpace(textBox1.Text) 
+                        ? $"Cuota {i}/{cantidadCuotas}"
+                        : $"{textBox1.Text} - Cuota {i}/{cantidadCuotas}";
+                    
+                    var gasto = new Gasto
+                    {
+                        Fecha = fechaCuota,
+                        Categoria = comboBox1.Text,
+                        Monto = montoPorCuota,
+                        QuienPago = comboBox2.Text,
+                        EsProporcional = checkBox1.Checked,
+                        Comentarios = comentarioCuota,
+                        CantidadCuotas = cantidadCuotas
+                    };
 
-                await _excelService.AgregarGastoAsync(gasto);
+                    await _excelService.AgregarGastoAsync(gasto);
+                }
 
                 MostrarMensajeExito();
                 LimpiarCampos();
@@ -218,6 +233,7 @@ namespace Gastos
             comboBox1.Text = "";
             numericUpDown1.Value = 1;
             comboBox2.Text = "";
+            cuotas.Value = 1;
             checkBox1.Checked = true;
             cuotas.Value = 1;
             textBox1.Text = "";

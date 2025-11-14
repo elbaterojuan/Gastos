@@ -88,35 +88,94 @@ namespace Gastos.Services
                         
                         if (worksheet == null)
                         {
-                            // Crear la hoja si no existe
-                            worksheet = package.Workbook.Worksheets.Add(nombreHoja);
+                            // Buscar la última hoja existente para usar como plantilla
+                            var ultimaHoja = package.Workbook.Worksheets
+                                .OrderByDescending(w => w.Name)
+                                .FirstOrDefault();
                             
-                            // Crear encabezados
-                            worksheet.Cells[1, 1].Value = "Fecha";
-                            worksheet.Cells[1, 2].Value = "Categoría";
-                            worksheet.Cells[1, 3].Value = "Persona";
-                            worksheet.Cells[1, 4].Value = "Es Cuota";
-                            worksheet.Cells[1, 5].Value = "Monto";
-                            worksheet.Cells[1, 6].Value = "Descripción";
-                            worksheet.Cells[1, 7].Value = "Cuotas";
-                            
-                            // Aplicar estilo a encabezados
-                            using (var range = worksheet.Cells[1, 1, 1, 7])
+                            if (ultimaHoja != null)
                             {
-                                range.Style.Font.Bold = true;
-                                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(37, 99, 235));
-                                range.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                                // Copiar la última hoja completa (con fórmulas y formato)
+                                worksheet = package.Workbook.Worksheets.Add(nombreHoja, ultimaHoja);
+                                
+                                // Limpiar solo los datos de gastos (columnas A, B, C, D, E, H desde fila 2)
+                                if (worksheet.Dimension != null)
+                                {
+                                    int ultimaFilaCopiada = worksheet.Dimension.End.Row;
+                                    
+                                    // Borrar contenido de las columnas de gastos
+                                    for (int row = 2; row <= ultimaFilaCopiada; row++)
+                                    {
+                                        worksheet.Cells[row, 1].Value = null; // Fecha
+                                        worksheet.Cells[row, 2].Value = null; // Categoría
+                                        worksheet.Cells[row, 3].Value = null; // Monto
+                                        worksheet.Cells[row, 4].Value = null; // QuienPago
+                                        worksheet.Cells[row, 5].Value = null; // EsProporcional
+                                        worksheet.Cells[row, 8].Value = null; // Comentarios
+                                    }
+                                }
+                                
+                                // Actualizar fórmulas M2 y N2 con referencia al mes anterior
+                                try
+                                {
+                                    var mesAnterior = gasto.Fecha.AddMonths(-1);
+                                    var nombreMesAnterior = mesAnterior.ToString("MMMM", new System.Globalization.CultureInfo("es-ES"));
+                                    var añoAnteriorCorto = mesAnterior.Year.ToString().Substring(2);
+                                    var nombreHojaAnterior = $"{nombreMesAnterior}-{añoAnteriorCorto}";
+                                    
+                                    // Verificar si la hoja anterior existe
+                                    var hojaAnteriorExiste = package.Workbook.Worksheets[nombreHojaAnterior] != null;
+                                    
+                                    if (hojaAnteriorExiste)
+                                    {
+                                        // Actualizar fórmula M2 (Debe Andrea)
+                                        worksheet.Cells["M2"].Formula = $"=SUM(F2:F50)-K2+'{nombreHojaAnterior}'!M2";
+                                        
+                                        // Actualizar fórmula N2 (Debe Juan)
+                                        worksheet.Cells["N2"].Formula = $"=SUM(G2:G50)-L2+'{nombreHojaAnterior}'!N2";
+                                    }
+                                    else
+                                    {
+                                        // Si es el primer mes, usar solo la suma sin referencia anterior
+                                        worksheet.Cells["M2"].Formula = "=SUM(F2:F50)-K2";
+                                        worksheet.Cells["N2"].Formula = "=SUM(G2:G50)-L2";
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"No se pudieron actualizar las fórmulas M2/N2: {ex.Message}");
+                                }
                             }
-                            
-                            // Ajustar ancho de columnas
-                            worksheet.Column(1).Width = 12;
-                            worksheet.Column(2).Width = 20;
-                            worksheet.Column(3).Width = 15;
-                            worksheet.Column(4).Width = 10;
-                            worksheet.Column(5).Width = 12;
-                            worksheet.Column(6).Width = 35;
-                            worksheet.Column(7).Width = 10;
+                            else
+                            {
+                                // Si no hay hojas existentes, crear una básica
+                                worksheet = package.Workbook.Worksheets.Add(nombreHoja);
+                                
+                                // Crear encabezados
+                                worksheet.Cells[1, 1].Value = "Fecha";
+                                worksheet.Cells[1, 2].Value = "Categoría";
+                                worksheet.Cells[1, 3].Value = "Monto";
+                                worksheet.Cells[1, 4].Value = "QuienPago";
+                                worksheet.Cells[1, 5].Value = "EsProporcional";
+                                worksheet.Cells[1, 8].Value = "Comentarios";
+                                
+                                // Aplicar estilo a encabezados
+                                using (var range = worksheet.Cells[1, 1, 1, 8])
+                                {
+                                    range.Style.Font.Bold = true;
+                                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(37, 99, 235));
+                                    range.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                                }
+                                
+                                // Ajustar ancho de columnas
+                                worksheet.Column(1).Width = 12;
+                                worksheet.Column(2).Width = 20;
+                                worksheet.Column(3).Width = 12;
+                                worksheet.Column(4).Width = 15;
+                                worksheet.Column(5).Width = 15;
+                                worksheet.Column(8).Width = 35;
+                            }
                         }
                         
                         // Encontrar última fila
@@ -322,19 +381,15 @@ namespace Gastos.Services
             {
                 Mes = fecha.Month,
                 Año = fecha.Year,
-                CantidadGastos = gastos.Count,
-                TotalGastado = gastos.Sum(g => g.Monto),
-                PromedioGasto = gastos.Any() ? gastos.Average(g => g.Monto) : 0
+                CantidadGastos = gastos.Count
             };
+
+            // Leer valores calculados por Excel desde la fila 2
+            await LeerTotalesDesdeExcelAsync(fecha, resumen);
 
             // Gastos por categoría
             resumen.GastosPorCategoria = gastos
                 .GroupBy(g => g.Categoria)
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.Monto));
-
-            // Gastos por persona
-            resumen.GastosPorPersona = gastos
-                .GroupBy(g => g.QuienPago)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.Monto));
 
             // Leer deudas desde las columnas M y N del Excel
@@ -344,6 +399,74 @@ namespace Gastos.Services
             await LeerSueldosAsync(fecha, resumen);
 
             return resumen;
+        }
+
+        /// <summary>
+        /// Lee los totales calculados por Excel desde la fila 2 (J2, K2, L2)
+        /// </summary>
+        private async Task LeerTotalesDesdeExcelAsync(DateTime fecha, ResumenMensual resumen)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    if (!File.Exists(_excelPath))
+                        return;
+
+                    using (var package = new ExcelPackage(new FileInfo(_excelPath)))
+                    {
+                        var worksheet = BuscarHojaMes(package, fecha);
+                        if (worksheet == null || worksheet.Dimension == null)
+                            return;
+
+                        // J2 = Total Gastos
+                        var totalGastos = worksheet.Cells[2, 10].Value;
+                        if (totalGastos != null)
+                        {
+                            if (totalGastos is double || totalGastos is int)
+                                resumen.TotalGastado = Convert.ToDecimal(totalGastos);
+                            else if (decimal.TryParse(totalGastos.ToString(), out decimal total))
+                                resumen.TotalGastado = total;
+                        }
+
+                        // Calcular promedio (si hay gastos)
+                        if (resumen.CantidadGastos > 0)
+                            resumen.PromedioGasto = resumen.TotalGastado / resumen.CantidadGastos;
+
+                        // K2 = Total Andrea
+                        var totalAndrea = worksheet.Cells[2, 11].Value;
+                        if (totalAndrea != null)
+                        {
+                            decimal valorAndrea = 0;
+                            if (totalAndrea is double || totalAndrea is int)
+                                valorAndrea = Convert.ToDecimal(totalAndrea);
+                            else if (decimal.TryParse(totalAndrea.ToString(), out decimal ta))
+                                valorAndrea = ta;
+
+                            if (!resumen.GastosPorPersona.ContainsKey("Andrea"))
+                                resumen.GastosPorPersona["Andrea"] = valorAndrea;
+                        }
+
+                        // L2 = Total Juan
+                        var totalJuan = worksheet.Cells[2, 12].Value;
+                        if (totalJuan != null)
+                        {
+                            decimal valorJuan = 0;
+                            if (totalJuan is double || totalJuan is int)
+                                valorJuan = Convert.ToDecimal(totalJuan);
+                            else if (decimal.TryParse(totalJuan.ToString(), out decimal tj))
+                                valorJuan = tj;
+
+                            if (!resumen.GastosPorPersona.ContainsKey("Juan"))
+                                resumen.GastosPorPersona["Juan"] = valorJuan;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error al leer totales desde Excel: {ex.Message}");
+                }
+            });
         }
 
         /// <summary>

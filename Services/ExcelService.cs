@@ -95,9 +95,12 @@ namespace Gastos.Services
                             worksheet = package.Workbook.Worksheets[nombreHoja];
                         }
                         
-                        // Encontrar última fila
-                        int lastRow = worksheet.Dimension?.End.Row ?? 1;
-                        int newRow = lastRow + 1;
+                        // Encontrar la primera fila vacía (buscar desde fila 2 hasta encontrar una vacía)
+                        int newRow = 2;
+                        while (worksheet.Cells[newRow, 1].Value != null)
+                        {
+                            newRow++;
+                        }
                         
                         // Agregar datos
                         worksheet.Cells[newRow, 1].Value = gasto.Fecha;

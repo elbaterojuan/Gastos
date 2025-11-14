@@ -61,7 +61,11 @@ namespace Gastos
         {
             for (int i = 1; i <= oSheet.UsedRange.Rows.Count; i++)
             {
-                if (oSheet.Cells[i, 1].Value == null && oSheet.Cells[i, 2].Value == null && oSheet.Cells[i, 3].Value == null)
+                Range cell1 = (Range)oSheet.Cells[i, 1];
+                Range cell2 = (Range)oSheet.Cells[i, 2];
+                Range cell3 = (Range)oSheet.Cells[i, 3];
+                
+                if (cell1.Value == null && cell2.Value == null && cell3.Value == null)
                 {
                     return i;
                 }
@@ -72,12 +76,12 @@ namespace Gastos
 
         private void addValues(Worksheet oSheet,int row)
         {
-            oSheet.Cells[row, 1].Value = dateTimePicker1.Value.ToString("M/d/yyyy");
-            oSheet.Cells[row, 2].Value = comboBox1.Text;
-            oSheet.Cells[row, 3].Value = numericUpDown1.Value;
-            oSheet.Cells[row, 4].Value = comboBox2.Text;
-            oSheet.Cells[row, 5].Value = (checkBox1.Checked) ? "SI" : "NO";
-            oSheet.Cells[row, 8].Value = (cuotas.Value==1) ? textBox1.Text: textBox1.Text + " " + cuotas.Value;
+            ((Range)oSheet.Cells[row, 1]).Value = dateTimePicker1.Value.ToString("M/d/yyyy");
+            ((Range)oSheet.Cells[row, 2]).Value = comboBox1.Text;
+            ((Range)oSheet.Cells[row, 3]).Value = numericUpDown1.Value;
+            ((Range)oSheet.Cells[row, 4]).Value = comboBox2.Text;
+            ((Range)oSheet.Cells[row, 5]).Value = (checkBox1.Checked) ? "SI" : "NO";
+            ((Range)oSheet.Cells[row, 8]).Value = (cuotas.Value==1) ? textBox1.Text: textBox1.Text + " " + cuotas.Value;
 
         }
 
@@ -94,7 +98,7 @@ namespace Gastos
         {
             string month = date.ToString("MMMM", Thread.CurrentThread.CurrentCulture);
             month = char.ToUpper(month[0]) + month.Substring(1);
-            return oWB.Worksheets[String.Format("{0}-{1}",month,date.ToString("yy"))];
+            return (Worksheet)oWB.Worksheets[String.Format("{0}-{1}",month,date.ToString("yy"))];
         }
 
         private Microsoft.Office.Interop.Excel.Application getExcel()

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using System.Net;
 using Gastos.Models;
 using Gastos.Services;
 using Gastos.Utils;
@@ -105,16 +106,30 @@ namespace Gastos
             {
                 var configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
                 var configDoc = XDocument.Load(configPath);
-                
-                var categoriasElement = configDoc.Descendants("setting")
-                    .FirstOrDefault(s => s.Attribute("name")?.Value == "Categorias");
-                
-                if (categoriasElement != null)
+
+                // Buscar el elemento <setting name="Categorias"> dentro de applicationSettings
+                var categoriasSetting = configDoc.Descendants("setting")
+                    .FirstOrDefault(s => (string)s.Attribute("name") == "Categorias");
+
+                if (categoriasSetting != null)
                 {
-                    var arrayOfString = categoriasElement.Descendants("string");
-                    foreach (var categoria in arrayOfString)
+                    // El valor está escapado (ej: &lt;ArrayOfString...&gt;). Extraer el contenido del elemento <value>
+                    var valueElem = categoriasSetting.Element("value");
+                    var raw = valueElem != null ? valueElem.Value : string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(raw))
                     {
-                        comboBox1.Items.Add(categoria.Value);
+                        // Decodificar entidades HTML y parsear el XML interno
+                        var decoded = WebUtility.HtmlDecode(raw).Trim();
+                        if (!string.IsNullOrWhiteSpace(decoded) && decoded.StartsWith("<"))
+                        {
+                            var innerDoc = XDocument.Parse(decoded);
+                            var strings = innerDoc.Descendants("string").Select(x => x.Value).Where(s => !string.IsNullOrWhiteSpace(s));
+                            foreach (var categoria in strings)
+                            {
+                                comboBox1.Items.Add(categoria);
+                            }
+                        }
                     }
                 }
             }

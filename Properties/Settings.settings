@@ -2,11 +2,44 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Gastos.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
+    <Setting Name="Categorias" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">
+                    &lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
+                        &lt;string&gt;Almacen&lt;/string&gt;
+			            &lt;string&gt;Almuerzo&lt;/string&gt;
+                        &lt;string&gt;Apple Tv&lt;/string&gt;
+                        &lt;string&gt;Carnicería&lt;/string&gt;
+                        &lt;string&gt;Claro&lt;/string&gt;
+                        &lt;string&gt;Consolidación&lt;/string&gt;
+                        &lt;string&gt;Delivery&lt;/string&gt;
+                        &lt;string&gt;Disney+&lt;/string&gt;
+                        &lt;string&gt;Edesur&lt;/string&gt;
+                        &lt;string&gt;Expensas&lt;/string&gt;
+                        &lt;string&gt;Farmacia&lt;/string&gt;
+                        &lt;string&gt;Fiambrería&lt;/string&gt;
+			            &lt;string&gt;Flow&lt;/string&gt;
+                        &lt;string&gt;Gatas&lt;/string&gt;
+                        &lt;string&gt;Impuesto Municipal&lt;/string&gt;
+                        &lt;string&gt;Luna&lt;/string&gt;
+                        &lt;string&gt;Mercadolibre&lt;/string&gt;
+                        &lt;string&gt;Metrogas&lt;/string&gt;
+                        &lt;string&gt;Netflix&lt;/string&gt;
+                        &lt;string&gt;Otros&lt;/string&gt;
+                        &lt;string&gt;Pescadería&lt;/string&gt;
+                        &lt;string&gt;Prime Video&lt;/string&gt;
+                        &lt;string&gt;Salida&lt;/string&gt;
+                        &lt;string&gt;Seguro Hogar&lt;/string&gt;
+                        &lt;string&gt;Spotify&lt;/string&gt;
+                        &lt;string&gt;Supermercado&lt;/string&gt;
+                        &lt;string&gt;Verdulería&lt;/string&gt;
+                    &lt;/ArrayOfString&gt;
+                </Value>
+    </Setting>
     <Setting Name="Carpeta" Type="System.String" Scope="User">
-      <Value Profile="(Default)">C:\Users\juan.sebastian.rocco\Downloads</Value>
+      <Value Profile="(Default)">G:\My Drive</Value>
     </Setting>
     <Setting Name="Archivo" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Gastos.xls</Value>
+      <Value Profile="(Default)">Gastos.xlsm</Value>
     </Setting>
   </Settings>
 </SettingsFile>

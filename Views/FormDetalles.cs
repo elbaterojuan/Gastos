@@ -4,6 +4,8 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
+using System.Net;
 using Gastos.Models;
 using Gastos.Services;
 using Gastos.Utils;
@@ -275,21 +277,55 @@ namespace Gastos.Views
             try
             {
                 _gastos = await _excelService.ObtenerGastosMesAsync(_fecha);
-                
-                // Cargar categorías únicas
-                var categorias = _gastos.Select(g => g.Categoria).Distinct().OrderBy(c => c).ToList();
+
+                // Leer categorías desde app settings (App.config)
+                var categoriasDesdeSettings = new List<string>();
+                try
+                {
+                    var raw = Properties.Settings.Default.Categorias ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(raw))
+                    {
+                        var decoded = WebUtility.HtmlDecode(raw).Trim();
+                        if (!string.IsNullOrWhiteSpace(decoded) && decoded.StartsWith("<"))
+                        {
+                            var doc = XDocument.Parse(decoded);
+                            categoriasDesdeSettings = doc.Descendants("string")
+                                .Select(x => x.Value)
+                                .Where(s => !string.IsNullOrWhiteSpace(s))
+                                .Distinct()
+                                .ToList();
+                        }
+                    }
+                }
+                catch { /* ignorar errores de parseo de settings */ }
+
+                // Cargar categorías únicas desde gastos y unir con las definidas en settings
+                var categoriasDesdeGastos = _gastos.Select(g => g.Categoria)
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Distinct()
+                    .ToList();
+
+                var categorias = categoriasDesdeSettings
+                    .Union(categoriasDesdeGastos)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToList();
+
+                // Actualizar cboCategoria
+                cboCategoria.Items.Clear();
+                cboCategoria.Items.Add("Todas");
                 foreach (var cat in categorias)
                 {
-                    if (!cboCategoria.Items.Contains(cat))
-                        cboCategoria.Items.Add(cat);
+                    cboCategoria.Items.Add(cat);
                 }
-                
+                cboCategoria.SelectedIndex = 0;
+
                 // Configurar ComboBox de Categoría en el DataGridView
                 var colCategoria = (DataGridViewComboBoxColumn)dgvGastos.Columns[1];
                 colCategoria.Items.Clear();
                 foreach (var cat in categorias)
                     colCategoria.Items.Add(cat);
-                
+
                 // Configurar ComboBox de QuienPago en el DataGridView
                 var colQuienPago = (DataGridViewComboBoxColumn)dgvGastos.Columns[3];
                 colQuienPago.Items.Clear();

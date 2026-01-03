@@ -1,143 +1,274 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+using System.Configuration;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.Office.Interop.Excel;
-using System.Threading;
-using System.Globalization;
-using System.IO;
-using System.Runtime.InteropServices;
+using System.Xml.Linq;
+using System.Net;
+using Gastos.Models;
+using Gastos.Services;
+using Gastos.Utils;
 
 namespace Gastos
 {
     public partial class Form1 : Form
     {
-        Microsoft.Office.Interop.Excel.Application oXL;
-        Workbooks oWBs;
-        Workbook oWB;
-        System.Windows.Forms.Timer myTimer = new System.Windows.Forms.Timer();
+        private ExcelService _excelService;
+        private System.Windows.Forms.Timer _timer;
 
         public Form1()
         {
-            oXL = getExcel();
-            oWBs = oXL.Workbooks;
-            oXL.WindowState = XlWindowState.xlMaximized;
-            oXL.Visible = true;
-            oWB = getWorkbook();
             Thread.CurrentThread.CurrentCulture = new CultureInfo("es-ES");
             Thread.CurrentThread.CurrentUICulture = new CultureInfo("es-ES");
+            
             InitializeComponent();
-            dateTimePicker1.Value = DateTime.Now;
-            string[] strArray = new string[Properties.Settings.Default.Categorias.Count];
-            Properties.Settings.Default.Categorias.CopyTo(strArray, 0);
-            comboBox1.Items.AddRange(strArray);
-            myTimer.Tick += new EventHandler(myTimer_Tick);
+            InicializarServicios();
+            AplicarEstilosModernos();
+            ConfigurarControles();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void InicializarServicios()
         {
-            Worksheet oSheet = getSheet(oWB, dateTimePicker1.Value);
-            oSheet.Select(Type.Missing);
-            addValues(oSheet, getLastRow(oSheet));
-            this.resultLbl.Show();
-            myTimer.Interval = 3000;
-            myTimer.Start();
-        }
-
-        private void myTimer_Tick(object sender, EventArgs e)
-        {
-            this.resultLbl.Hide();
-            cleanInputs();
-            myTimer.Stop();
-        }
-
-
-        private int getLastRow(Worksheet oSheet)
-        {
-            for (int i = 1; i <= oSheet.UsedRange.Rows.Count; i++)
+            try
             {
-                Range cell1 = (Range)oSheet.Cells[i, 1];
-                Range cell2 = (Range)oSheet.Cells[i, 2];
-                Range cell3 = (Range)oSheet.Cells[i, 3];
+                // Usar el directorio de la aplicación
+                string directorioApp = AppDomain.CurrentDomain.BaseDirectory;
+                string nombreArchivo = "Gastos.xlsm";
                 
-                if (cell1.Value == null && cell2.Value == null && cell3.Value == null)
+                _excelService = new ExcelService(directorioApp, nombreArchivo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al inicializar Excel: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+            }
+        }
+
+        private void AplicarEstilosModernos()
+        {
+            // Estilo del formulario
+            this.BackColor = TemaColores.FondoClaro;
+            this.Font = new Font("Segoe UI", 9.5F);
+            this.Size = new Size(500, 550);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            
+            // Estilos de labels
+            label1.AplicarEstiloLabel();
+            label2.AplicarEstiloLabel();
+            label3.AplicarEstiloLabel();
+            label4.AplicarEstiloLabel();
+            label5.AplicarEstiloLabel();
+            label6.AplicarEstiloLabel();
+            
+            // Estilos de controles
+            textBox1.AplicarEstiloTextBox();
+            comboBox1.AplicarEstiloComboBox();
+            comboBox2.AplicarEstiloComboBox();
+            button1.AplicarEstiloBotonPrimario();
+            button1.Text = "💾 Agregar Gasto";
+            
+            // Estilo del mensaje de éxito
+            resultLbl.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            resultLbl.ForeColor = TemaColores.Exito;
+            
+            // Labels con iconos
+            label1.Text = "📅 Fecha";
+            label2.Text = "🏷️ Categoría";
+            label3.Text = "💰 Monto";
+            label4.Text = "👤 Quién Pagó";
+            label7.Text = "🔢 Cuotas";
+            label5.Text = "⚖️ ¿Gasto Proporcional?";
+            label6.Text = "📝 Comentarios";
+        }
+
+        private void ConfigurarControles()
+        {
+            dateTimePicker1.Value = DateTime.Now;
+            
+            // Configurar formato de moneda
+            var culture = new CultureInfo("es-AR"); // Argentina usa $
+            culture.NumberFormat.CurrencySymbol = "$";
+            numericUpDown1.Text = culture.NumberFormat.CurrencySymbol;
+            
+            // Configurar cuotas con valor por defecto 1
+            cuotas.Value = 1;
+            cuotas.Minimum = 1;
+            cuotas.Maximum = 36;
+            
+            // Cargar categorías directamente desde el archivo .exe.config
+            comboBox1.Items.Clear();
+            
+            try
+            {
+                var configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
+                var configDoc = XDocument.Load(configPath);
+
+                // Buscar el elemento <setting name="Categorias"> dentro de applicationSettings
+                var categoriasSetting = configDoc.Descendants("setting")
+                    .FirstOrDefault(s => (string)s.Attribute("name") == "Categorias");
+
+                if (categoriasSetting != null)
                 {
-                    return i;
+                    // El valor está escapado (ej: &lt;ArrayOfString...&gt;). Extraer el contenido del elemento <value>
+                    var valueElem = categoriasSetting.Element("value");
+                    var raw = valueElem != null ? valueElem.Value : string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(raw))
+                    {
+                        // Decodificar entidades HTML y parsear el XML interno
+                        var decoded = WebUtility.HtmlDecode(raw).Trim();
+                        if (!string.IsNullOrWhiteSpace(decoded) && decoded.StartsWith("<"))
+                        {
+                            var innerDoc = XDocument.Parse(decoded);
+                            var strings = innerDoc.Descendants("string").Select(x => x.Value).Where(s => !string.IsNullOrWhiteSpace(s));
+                            foreach (var categoria in strings)
+                            {
+                                comboBox1.Items.Add(categoria);
+                            }
+                        }
+                    }
                 }
             }
-
-            return oSheet.UsedRange.Rows.Count;
-        }
-
-        private void addValues(Worksheet oSheet,int row)
-        {
-            ((Range)oSheet.Cells[row, 1]).Value = dateTimePicker1.Value.ToString("M/d/yyyy");
-            ((Range)oSheet.Cells[row, 2]).Value = comboBox1.Text;
-            ((Range)oSheet.Cells[row, 3]).Value = numericUpDown1.Value;
-            ((Range)oSheet.Cells[row, 4]).Value = comboBox2.Text;
-            ((Range)oSheet.Cells[row, 5]).Value = (checkBox1.Checked) ? "SI" : "NO";
-            ((Range)oSheet.Cells[row, 8]).Value = (cuotas.Value==1) ? textBox1.Text: textBox1.Text + " " + cuotas.Value;
-
-        }
-
-        private void cleanInputs()
-        {
-            comboBox1.Text = null;
-            numericUpDown1.Value = 1;
-            comboBox2.Text = null;
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al cargar categorías: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            
+            // Configurar checkbox con valor por defecto
             checkBox1.Checked = true;
-            textBox1.Text = null;
+            
+            // Configurar timer para ocultar mensaje de éxito
+            _timer = new System.Windows.Forms.Timer { Interval = 3000 };
+            _timer.Tick += Timer_Tick;
+            
+            // Tooltips informativos
+            var tooltip = new ToolTip();
+            tooltip.SetToolTip(checkBox1, "Marcar si el gasto debe dividirse proporcionalmente");
+            tooltip.SetToolTip(textBox1, "Comentarios adicionales sobre el gasto");
         }
 
-        private Worksheet getSheet(Workbook oWB,DateTime date)
+        private async void button1_Click(object sender, EventArgs e)
         {
-            string month = date.ToString("MMMM", Thread.CurrentThread.CurrentCulture);
-            month = char.ToUpper(month[0]) + month.Substring(1);
-            return (Worksheet)oWB.Worksheets[String.Format("{0}-{1}",month,date.ToString("yy"))];
-        }
+            if (!ValidarCampos()) return;
 
-        private Microsoft.Office.Interop.Excel.Application getExcel()
-        {
             try
             {
-                return (Microsoft.Office.Interop.Excel.Application)Marshal.GetActiveObject("Excel.Application");
+                button1.Enabled = false;
+                button1.Text = "⏳ Guardando...";
+
+                int cantidadCuotas = (int)cuotas.Value;
+                decimal montoPorCuota = numericUpDown1.Value / cantidadCuotas;
+                
+                // Procesar cada cuota
+                for (int i = 1; i <= cantidadCuotas; i++)
+                {
+                    var fechaCuota = dateTimePicker1.Value.AddMonths(i - 1);
+                    
+                    // Solo agregar info de cuota si hay más de una
+                    string comentarioCuota;
+                    if (cantidadCuotas > 1)
+                    {
+                        comentarioCuota = string.IsNullOrWhiteSpace(textBox1.Text) 
+                            ? $"Cuota {i}/{cantidadCuotas}"
+                            : $"{textBox1.Text} - Cuota {i}/{cantidadCuotas}";
+                    }
+                    else
+                    {
+                        comentarioCuota = textBox1.Text;
+                    }
+                    
+                    var gasto = new Gasto
+                    {
+                        Fecha = fechaCuota,
+                        Categoria = comboBox1.Text,
+                        Monto = montoPorCuota,
+                        QuienPago = comboBox2.Text,
+                        EsProporcional = checkBox1.Checked,
+                        Comentarios = comentarioCuota,
+                        CantidadCuotas = cantidadCuotas
+                    };
+
+                    await _excelService.AgregarGastoAsync(gasto);
+                }
+
+                MostrarMensajeExito();
+                LimpiarCampos();
             }
-            catch
+            catch (Exception ex)
             {
-                return new Microsoft.Office.Interop.Excel.Application();
+                MessageBox.Show($"Error al guardar el gasto: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            
+            finally
+            {
+                button1.Enabled = true;
+                button1.Text = "💾 Agregar Gasto";
+            }
         }
 
-        private Workbook getWorkbook()
+        private bool ValidarCampos()
         {
-            try
+            if (string.IsNullOrWhiteSpace(comboBox1.Text))
             {
-                return oWBs.get_Item(Properties.Settings.Default.Archivo);
+                MessageBox.Show("Por favor seleccione una categoría", "Validación", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                comboBox1.Focus();
+                return false;
             }
-            catch
+
+            if (numericUpDown1.Value <= 0)
             {
-                return oWBs.Open(Path.Combine(Properties.Settings.Default.Carpeta,Properties.Settings.Default.Archivo));
+                MessageBox.Show("El monto debe ser mayor a cero", "Validación", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                numericUpDown1.Focus();
+                return false;
             }
-            
+
+            if (string.IsNullOrWhiteSpace(comboBox2.Text))
+            {
+                MessageBox.Show("Por favor indique quién pagó", "Validación", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                comboBox2.Focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        private void MostrarMensajeExito()
+        {
+            resultLbl.Text = "✓ Gasto agregado correctamente";
+            resultLbl.Visible = true;
+            _timer.Start();
+        }
+
+        private void Timer_Tick(object sender, EventArgs e)
+        {
+            resultLbl.Visible = false;
+            _timer.Stop();
+        }
+
+        private void LimpiarCampos()
+        {
+            comboBox1.Text = "";
+            numericUpDown1.Value = 1;
+            comboBox2.Text = "";
+            cuotas.Value = 1;
+            checkBox1.Checked = true;
+            cuotas.Value = 1;
+            textBox1.Text = "";
+            comboBox1.Focus();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (oXL != null)
-            {
-                oWBs.Close();
-                oXL.Quit();
-
-                Marshal.ReleaseComObject(oWBs);
-                Marshal.ReleaseComObject(oXL);
-            }
+            _excelService?.Dispose();
+            _timer?.Dispose();
         }
-
     }
 }

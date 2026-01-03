@@ -12,7 +12,7 @@ namespace Gastos.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.13.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -25,41 +25,35 @@ namespace Gastos.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute(@"<?xml version=""1.0"" encoding=""utf-16""?>
-<ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
-  <string>Supermercado</string>
-  <string>Verduleria</string>
-  <string>Almacen</string>
-  <string>Carnicería</string>
-  <string>Pescadería</string>
-  <string>Sushi</string>
-  <string>Expensas</string>
-  <string>Edesur</string>
-  <string>Metrogas</string>
-  <string>Impuesto municipal</string>
-  <string>Arba</string>
-  <string>Telefónica</string>
-  <string>Casamiento</string>
-  <string>Netflix</string>
-  <string>Cablevisión</string>
-  <string>Prestamo</string>
-  <string>Salida</string>
-  <string>Seguro Hogar</string>
-  <string>Spotify</string>
-  <string>Farmacia</string>
-  <string>Limpieza</string>
-  <string>Consolidación</string>
-  <string>Otros</string>
-</ArrayOfString>")]
-        public global::System.Collections.Specialized.StringCollection Categorias {
+        [global::System.Configuration.DefaultSettingValueAttribute("\r\n                    <ArrayOfString xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-" +
+            "instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\r\n                       " +
+            " <string>Almacen</string>\r\n\t\t\t            <string>Almuerzo</string>\r\n           " +
+            "             <string>Apple Tv</string>\r\n                        <string>Carnicer" +
+            "ía</string>\r\n                        <string>Claro</string>\r\n                   " +
+            "     <string>Consolidación</string>\r\n                        <string>Delivery</s" +
+            "tring>\r\n                        <string>Disney+</string>\r\n                      " +
+            "  <string>Edesur</string>\r\n                        <string>Expensas</string>\r\n  " +
+            "                      <string>Farmacia</string>\r\n                        <string" +
+            ">Fiambrería</string>\r\n\t\t\t            <string>Flow</string>\r\n                    " +
+            "    <string>Gatas</string>\r\n                        <string>Impuesto Municipal</" +
+            "string>\r\n                        <string>Luna</string>\r\n                        " +
+            "<string>Mercadolibre</string>\r\n                        <string>Metrogas</string>" +
+            "\r\n                        <string>Netflix</string>\r\n                        <str" +
+            "ing>Otros</string>\r\n                        <string>Pescadería</string>\r\n       " +
+            "                 <string>Prime Video</string>\r\n                        <string>S" +
+            "alida</string>\r\n                        <string>Seguro Hogar</string>\r\n         " +
+            "               <string>Spotify</string>\r\n                        <string>Superme" +
+            "rcado</string>\r\n                        <string>Verdulería</string>\r\n           " +
+            "         </ArrayOfString>\r\n                ")]
+        public string Categorias {
             get {
-                return ((global::System.Collections.Specialized.StringCollection)(this["Categorias"]));
+                return ((string)(this["Categorias"]));
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Users\\juan.sebastian.rocco\\Downloads")]
+        [global::System.Configuration.DefaultSettingValueAttribute("G:\\My Drive")]
         public string Carpeta {
             get {
                 return ((string)(this["Carpeta"]));
@@ -71,7 +65,7 @@ namespace Gastos.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Gastos.xls")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Gastos.xlsm")]
         public string Archivo {
             get {
                 return ((string)(this["Archivo"]));

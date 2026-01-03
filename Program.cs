@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Globalization;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Gastos
@@ -14,9 +13,15 @@ namespace Gastos
         [STAThread]
         static void Main()
         {
+            // Configurar cultura para usar $ como símbolo de moneda
+            var culture = new CultureInfo("es-AR");
+            culture.NumberFormat.CurrencySymbol = "$";
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
+            
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            Application.Run(new FormMenuPrincipal());
         }
     }
 }
